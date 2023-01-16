@@ -17,3 +17,7 @@ include:
     file : go.yaml
   - local: 'variables.yaml'
 
+# override the default go test configuration
+golangtest:
+  # testing may not fail
+  allow_failure: false

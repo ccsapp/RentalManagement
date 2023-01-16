@@ -1,4 +1,4 @@
 variables:
     GO_BUILD_OPTIONS: ""
-    GO_EXPORT_BUILD_OPTIONS: "CGO_ENABLED=0 GOOS=linux GOFLAGS=-ldflags=-extldflags=-static"
-    GO_EXPORT_TEST_OPTIONS: "CGO_ENABLED=0 GOOS=linux"
+    GO_EXPORT_BUILD_OPTIONS: "CGO_ENABLED=0 GOOS=linux GOFLAGS=-ldflags=-extldflags=-static GOPRIVATE=git.scc.kit.edu"
+    GO_EXPORT_TEST_OPTIONS: "CGO_ENABLED=0 GOOS=linux GOPRIVATE=git.scc.kit.edu"
