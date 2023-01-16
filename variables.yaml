@@ -1,0 +1,4 @@
+variables:
+    GO_BUILD_OPTIONS: ""
+    GO_EXPORT_BUILD_OPTIONS: "CGO_ENABLED=0 GOOS=linux GOFLAGS=-ldflags=-extldflags=-static"
+    GO_EXPORT_TEST_OPTIONS: "CGO_ENABLED=0 GOOS=linux"
