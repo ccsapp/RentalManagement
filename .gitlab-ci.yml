@@ -1,19 +1,19 @@
 # Note that the prefix in the npm commands forces npm to use the src folder.
 include:
   - project: cm-tm/cm-team/pipelineartifacts/pipeline
-    ref: "1"
+    ref: "PSE"
     file : base.yaml
   - project: cm-tm/cm-team/pipelineartifacts/pipeline
-    ref: "1"
+    ref: "PSE"
     file : image.yaml
   - project: cm-tm/cm-team/pipelineartifacts/pipeline
-    ref: "1"
+    ref: "PSE"
     file : chart.yaml
   - project: cm-tm/cm-team/pipelineartifacts/pipeline
-    ref: "1"
+    ref: "PSE"
     file : deploy.yaml
   - project: cm-tm/cm-team/pipelineartifacts/pipeline
-    ref: "1"
+    ref: "PSE"
     file : go.yaml
   - local: 'variables.yaml'
 
@@ -21,3 +21,8 @@ include:
 golangtest:
   # testing may not fail
   allow_failure: false
+
+  # provide the sequence diagrams as job artifacts
+  artifacts:
+    paths:
+      - src/.sequence/
