@@ -1,0 +1,16 @@
+version: '3.1'
+
+# Deploy this stack to test the database for development
+# We recommend to use MongoDB Compass for local database access
+services:
+  mongo:
+    image: mongo:6
+    restart: 'no'
+    ports:
+      - "27017:27017"
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: root
+      MONGO_INITDB_ROOT_PASSWORD: example
+      MONGO_INITDB_DATABASE: ccsappvp2rentals
+    volumes:
+      - ./init-user.js:/docker-entrypoint-initdb.d/init-user.js:ro

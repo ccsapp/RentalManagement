@@ -5,6 +5,12 @@ base-chart:
   affinity: {}
 
   extraEnvVars:
+    - name: RM_ALLOW_ORIGINS
+      value: "*"
+    - name: RM_DOMAIN_SERVER
+      value: https://cm-d-carimpl.cloud.iai.kit.edu
+    - name: RM_DOMAIN_TIMEOUT
+      value: 5s
     # How-To: Remove to square brakets array placeholder in the line above if you wanna define additional environment variables
     # Example for adding a defined value to a Pod/Container
     # - name: PACT_BROKER_PORT
@@ -57,7 +63,7 @@ base-chart:
     # Necessary because no default storageclass is predefined
     global:
       storageClass: shared
-    useStatefulSet: true
+    useStatefulSet: false
     # Authentication configuration
     auth: 
       # Enable Authentication
@@ -66,6 +72,10 @@ base-chart:
       password: mongodb 
       database: mongoDB
       # existingSecret: (keys: mongodb-password, mongodb-root-password, mongodb-replica-set-key)
+    readinessProbe:
+      timeoutSeconds: 30
+    startupProbe:
+      timeoutSeconds: 30
 
   # (beta) Enables a envoy proxy as sidecar get additional metrics, should not be enabled atm
   monitoring:
