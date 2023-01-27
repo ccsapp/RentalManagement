@@ -34,6 +34,7 @@ After that, start the Go server with the following environment variables:
 | `MONGODB_DATABASE_USER`               | root            |          |
 | `MONGODB_DATABASE_PASSWORD`           | example         |          |
 | `RENTAL_MANAGEMENT_COLLECTION_PREFIX` | someprefix      | optional |
+
 `RENTAL_MANAGEMENT_COLLECTION_PREFIX` provides a prefix to the collection to rule out that different microservice instances
 try to use the same collection. This is particularly useful for testing as all tests work on the same database.
 
