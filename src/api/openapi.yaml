@@ -1,0 +1,685 @@
+openapi: 3.0.0
+info:
+  title: RentalManagement
+  version: 1.0.0
+  description: Application Microservice API 1.0.0 providing the functionality for the capability Management of Rentals
+paths:
+  /cars:
+    get:
+      summary: Get Available Cars in a Time Period
+      operationId: getAvailableCars
+      parameters:
+        - in: query
+          name: timePeriod
+          schema:
+            $ref: '#/components/schemas/timePeriod'
+          required: true
+          explode: true
+      responses:
+        '200':
+          description: 'List of cars which are available in the given period'
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/carAvailable'
+        '400':
+          $ref: '#/components/responses/timePeriodInvalid'
+
+  /cars/{vin}:
+    parameters:
+      - $ref: '#/components/parameters/vinParam'
+    get:
+      summary: Get Static Information On a Car
+      operationId: getCar
+      responses:
+        '200':
+          description: 'Static information on a car'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/carStatic'
+        '400':
+          $ref: '#/components/responses/vinInvalid'
+        '404':
+          $ref: '#/components/responses/vinUnknown'
+
+  /cars/{vin}/rentals:
+    parameters:
+      - $ref: '#/components/parameters/vinParam'
+      - $ref: '#/components/parameters/customerIdParam'
+    post:
+      summary: Create a New Rental
+      operationId: createRental
+      requestBody:
+        description: Requested rental period
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/timePeriod'
+        required: true
+      responses:
+        '201':
+          description: 'Rental created.'
+        '400':
+          $ref: '#/components/responses/timePeriodOrCustomerIdOrVinInvalid'
+        '403':
+          description: 'The customer is not allowed to create a rental in that period.'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/genericError'
+        '404':
+          $ref: '#/components/responses/customerIdOrVinUnknown'
+        '409':
+          description: 'A conflicting rental already exists.'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/genericError'
+
+  /cars/{vin}/rentalStatus:
+    parameters:
+      - $ref: '#/components/parameters/vinParam'
+    get:
+      summary: Get the Active or Next Upcoming Rental
+      operationId: getNextRental
+      responses:
+        '200':
+          description: 'The rental status. A rental contains a Customer.'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/rentalFleetManager'
+        '204':
+          description: 'The car has no active or upcoming rental.'
+        '400':
+          $ref: '#/components/responses/vinInvalid'
+        '404':
+          $ref: '#/components/responses/vinUnknown'
+
+  /cars/{vin}/trunk:
+    parameters:
+      - $ref: '#/components/parameters/vinParam'
+    get:
+      parameters:
+        - $ref: '#/components/parameters/trunkAccessTokenParam'
+      summary: Get the Trunk Lock State of the Car
+      operationId: getLockState
+      responses:
+        '200':
+          description: 'Lock state successfully retrieved.'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/lockStateObject'
+        '400':
+          $ref: '#/components/responses/trunkTokenOrVinInvalid'
+        '404':
+          $ref: '#/components/responses/trunkTokenOrVinUnknown'
+        '403':
+          $ref: '#/components/responses/noPermission'
+    put:
+      parameters:
+        - $ref: '#/components/parameters/customerIdOptionalParam'
+        - $ref: '#/components/parameters/trunkAccessTokenOptionalParam'
+      summary: Set the Trunk Lock State of the Car
+      description: Either the customer ID or the token must be given.
+      operationId: setLockState
+      requestBody:
+        description: Requested LockState for the trunk
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/lockStateObject'
+        required: true
+      responses:
+        '204':
+          description: 'Trunk has now the new state.'
+        '400':
+          description: 'The trunk token, or customer ID, or VIN has an invalid format or an invalid combination of token and customer ID is given (none or both). A technical error message useful for debugging is provided in the response body.'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/genericError'
+        '404':
+          $ref: '#/components/responses/trunkPermissionOrVinUnknown'
+        '403':
+          $ref: '#/components/responses/noPermission'
+
+  /rentals:
+    parameters:
+      - $ref: '#/components/parameters/customerIdParam'
+    get:
+      summary: Get an Overview of a Customer’s Rentals
+      operationId: getOverview
+      responses:
+        '200':
+          description: A list of the customer's rentals including basic car data
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/rentalCustomerShort'
+        '400':
+          $ref: '#/components/responses/customerIdInvalid'
+        '404':
+          $ref: '#/components/responses/customerIdUnknown'
+
+  /rentals/{rentalId}:
+    parameters:
+      - $ref: '#/components/parameters/rentalIdParam'
+    get:
+      summary: Get the Status of the Rental and the Car
+      operationId: getRentalStatus
+      responses:
+        '200':
+          description: 'The rental status. A rental contains a car. 
+                        This car additionally contains dynamic data if the rental is active.'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/rentalCustomer'
+        '400':
+          $ref: '#/components/responses/rentalIdInvalid'
+        '404':
+          $ref: '#/components/responses/rentalIdUnknown'
+
+  /rentals/{rentalId}/trunkTokens:
+    parameters:
+      - $ref: '#/components/parameters/rentalIdParam'
+    post:
+      summary: Create a New Token to Access the Trunk
+      operationId: grantTrunkAccess
+      requestBody:
+        description: Requested validity period for token
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/timePeriod'
+        required: true
+      responses:
+        '201':
+          description: 'Trunk access token successfully created. The validity period gets cut to the active period of the rental.'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/trunkAccess'
+        '400':
+          $ref: '#/components/responses/timePeriodOrRentalIdInvalid'
+        '404':
+          $ref: '#/components/responses/rentalIdUnknown'
+        '403':
+          description: 'The given rental is not active or is not valid at any time during the requested time period.'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/genericError'
+
+components:
+  schemas:
+    rentalShort:
+      type: object
+      required:
+        - id
+        - active
+        - rentalPeriod
+      properties:
+        id:
+          $ref: '#/components/schemas/rentalId'
+        active:
+          $ref: '#/components/schemas/active'
+        rentalPeriod:
+          $ref: '#/components/schemas/timePeriod'
+    rentalCustomerShort:
+      allOf:
+        - $ref: '#/components/schemas/rentalShort'
+        - type: object
+          required:
+            - car
+          properties:
+            car:
+              $ref: '#/components/schemas/carBase'
+    rentalCustomer:
+      allOf:
+        - $ref: '#/components/schemas/rentalShort'
+        - type: object
+          required:
+            - car
+          properties:
+            car:
+              $ref: '#/components/schemas/car'
+            token:
+              $ref: '#/components/schemas/trunkAccess'
+          description: Rental information for a Customer
+    rentalFleetManager:
+      allOf:
+        - $ref: '#/components/schemas/rentalShort'
+        - type: object
+          required:
+            - customer
+          properties:
+            customer:
+              $ref: '#/components/schemas/customer'
+          description: Rental information for a fleet manager
+    customer:
+      type: object
+      required:
+        - customerId
+      properties:
+        customerId:
+          $ref: '#/components/schemas/customerId'
+      description: A customer
+    carBase:
+      type: object
+      required:
+        - vin
+        - brand
+        - model
+      properties:
+        vin:
+          $ref: '#/components/schemas/vin'
+        brand:
+          type: string
+          example: "Audi"
+          description: Data that specifies the brand name of the manufacturer
+        model:
+          type: string
+          example: "A3"
+          description: Data that specifies the particular type of car
+      description: Overview of a car
+    carAvailable:
+      allOf:
+        - $ref: '#/components/schemas/carBase'
+        - type: object
+          required:
+            - numberOfSeats
+          properties:
+            numberOfSeats:
+              type: integer
+              example: 5
+              description: Data that defines the number of seats that are built into a car
+      description: A car listed as available for rent
+    carStatic:
+      allOf:
+        - $ref: '#/components/schemas/carBase'
+        - type: object
+          required:
+            - technicalSpecification
+          properties:
+            technicalSpecification:
+              $ref: '#/components/schemas/technicalSpecification'
+      description: A car without the dynamic data
+    car:
+      allOf:
+        - $ref: '#/components/schemas/carStatic'
+        - type: object
+          properties:
+            dynamicData:
+                $ref: '#/components/schemas/dynamicData'
+      description: A specific type of vehicle
+    technicalSpecification:
+      type: object
+      required:
+        - color
+        - weight
+        - trunkVolume
+        - engine
+        - transmission
+        - numberOfSeats
+        - numberOfDoors
+        - fuel
+        - fuelCapacity
+        - consumption
+        - emissions
+      properties:
+        color:
+          type: string
+          example: "black"
+          description: Data on the description of the paint job of a car
+        weight:
+          type: integer
+          example: 1320
+          description: Data that specifies the total weight of a car when empty in kilograms (kg)
+        trunkVolume:
+          type: integer
+          example: 435
+          description: Data on the physical volume of the trunk in liters
+        engine:
+          type: object
+          required:
+            - type
+            - power
+          properties:
+            type:
+              type: string
+              example: 180 CDI
+              description: Data that contains the manufacturer-given type description of the engine
+            power:
+              type: integer
+              example: 150
+              description: Data on the power the engine can provide in kW
+          description: A physical unit that converts fuel into movement
+        transmission:
+          type: string
+          enum:
+            - MANUAL
+            - AUTOMATIC
+          example: MANUAL
+          description: A physical unit responsible for managing the conversion rate of the engine (can be automated or manually operated)
+        numberOfSeats:
+          type: integer
+          example: 5
+          description: Data that defines the number of seats that are built into a car
+        numberOfDoors:
+          type: integer
+          example: 5
+          description: Data that defines the number of doors that are built into a car
+        fuel:
+          type: string
+          enum:
+            - DIESEL
+            - PETROL
+            - ELECTRIC
+            - HYBRID_DIESEL
+            - HYBRID_PETROL
+          example: ELECTRIC
+          description: Data that defines the source of energy that powers the car
+        fuelCapacity:
+          type: string
+          pattern: '^((\d+\.\d+L)|(\d+\.\d+kWh)|((\d+\.\d+L);(\d+\.\d+kWh)))$'
+          example: 54.0L;85.2kWh
+          description: Data that specifies the amount of fuel that can be carried with the car
+        consumption:
+          type: object
+          required:
+            - city
+            - overland
+            - combined
+          properties:
+            city:
+              type: number
+              example: 6.4
+              description: "Data that specifies the amount of fuel that is consumed when driving within the city in: kW/100km or l/100km"
+            overland:
+              type: number
+              example: 4.6
+              description: "Data that specifies the amount of fuel that is consumed when driving outside of a city in: kW/100km or l/100km"
+            combined:
+              type: number
+              example: 5.2
+              description: "Data that specifies the combined amount of fuel that is consumed in: kW / 100 km or l / 100 km"
+          description: Data that specifies the amount of fuel consumed during car operation in units per 100 kilometers
+        emissions:
+          type: object
+          required:
+            - city
+            - overland
+            - combined
+          properties:
+            city:
+              type: number
+              example: 168
+              description: "Data that specifies the amount of emissions when driving within the city in: g CO2 / km"
+            overland:
+              type: number
+              example: 122
+              description: "Data that specifies the amount of emissions when driving outside of a city in: g CO2 / km"
+            combined:
+              type: number
+              example: 137
+              description: "Data that specifies the combined amount of emissions in: g CO2 / km. The combination is done by the manufacturer according to an industry-specific standard"
+          description: Data that specifies the CO2 emitted by a car during operation in gram per kilometer
+    dynamicData:
+      type: object
+      required:
+        - fuelLevelPercentage
+        - position
+        - trunkLockState
+        - doorsLockState
+        - engineState
+      properties:
+        fuelLevelPercentage:
+          type: integer
+          example: 100
+          description: Data that specifies the relation of remaining fuelCapacity to the maximum fuelCapacity in percentage
+        position:
+          type: object
+          required:
+            - latitude
+            - longitude
+          properties:
+            latitude:
+              type: number
+              example: 42.0
+              description: Data that specifies the distance from the equator
+            longitude:
+              type: number
+              example: 100.0
+              description: Data that specifies the distance east or west from a line (meridian) passing through Greenwich
+          description: Data that specifies the GeoCoordinate of a car
+        trunkLockState:
+          $ref: '#/components/schemas/lockState'
+        doorsLockState:
+          $ref: '#/components/schemas/lockState'
+        engineState:
+          type: string
+          enum:
+            - 'ON'
+            - 'OFF'
+      description: Data that changes during a car's operation
+    lockState:
+      type: string
+      enum:
+        - LOCKED
+        - UNLOCKED
+      description: Data that specifies whether an object is locked or unlocked
+    vin:
+      type: string
+      pattern: '^[A-HJ-NPR-Z0-9]{13}[0-9]{4}$'
+      example: WDD1690071J236589
+      description: A Vehicle Identification Number (VIN) which uniquely identifies a car
+    rentalId:
+      type: string
+      pattern: '^[a-zA-Z0-9]{8}$'
+      example: rZ6IIwcD
+      description: Unique identification of a rental
+    customerId:
+      type: string
+      pattern: '^[a-zA-Z0-9]{8}$'
+      example: d9ChwOvI
+      description: Unique identification of a customer
+    trunkAccessToken:
+      type: string
+      pattern: '^[a-zA-Z0-9]{24}$'
+      example: bumrLuCMbumrLuCMbumrLuCM
+      description: Trunk access token
+    trunkAccess:
+      type: object
+      description: Trunk access token with time
+      required:
+        - token
+        - validityPeriod
+      properties:
+        token:
+          $ref: '#/components/schemas/trunkAccessToken'
+        validityPeriod:
+          $ref: '#/components/schemas/timePeriod'
+    date-time:
+      type: string
+      format: date-time
+      example: "2017-07-21T17:32:28Z"
+      description: Data that specifies a point in time
+    timePeriod:
+      type: object
+      description: A period of time
+      required:
+        - startDate
+        - endDate
+      properties:
+        startDate:
+          $ref: '#/components/schemas/date-time'
+        endDate:
+          $ref: '#/components/schemas/date-time'
+    active:
+      type: boolean
+      example: true
+      description: Describes whether this rental is active
+    lockStateObject:
+      type: object
+      required:
+        - trunkLockState
+      properties:
+        trunkLockState:
+          $ref: '#/components/schemas/lockState'
+      description: An object containing the trunk lock state
+
+    # -- Errors --
+    genericError:
+      type: object
+      required:
+        - message
+      properties:
+        message:
+          type: string
+          example: "An error occurred"
+          description: A message that describes the error
+
+  responses:
+    vinInvalid:
+      description: The VIN has an invalid format. A technical error message useful for debugging is provided in the response body.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/genericError'
+    vinUnknown:
+      description: The car with the given VIN is unknown to the system.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/genericError'
+    rentalIdInvalid:
+      description: The rental ID has an invalid format. A technical error message useful for debugging is provided in the response body.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/genericError'
+    rentalIdUnknown:
+      description: The rental with the given ID is unknown to the system.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/genericError'
+    customerIdInvalid:
+      description: The customer ID has an invalid format. A technical error message useful for debugging is provided in the response body.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/genericError'
+    customerIdUnknown:
+      description: The customer is unknown to the system. A technical error message useful for debugging is provided in the response body.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/genericError'
+    customerIdOrVinUnknown:
+      description: The customer or car with the given VIN is unknown to the system.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/genericError'
+    trunkTokenOrVinInvalid:
+      description: The trunk token or VIN has an invalid format. A technical error message useful for debugging is provided in the response body.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/genericError'
+    trunkPermissionOrVinUnknown:
+      description: The token/customer or car with the given VIN is unknown to the system.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/genericError'
+    trunkTokenOrVinUnknown:
+      description: The token or car with the given VIN is unknown to the system.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/genericError'
+    timePeriodInvalid:
+      description: The time period has an invalid format. A technical error message useful for debugging is provided in the response body.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/genericError'
+    timePeriodOrCustomerIdOrVinInvalid:
+      description: The time period, customer ID, or VIN has an invalid format. A technical error message useful for debugging is provided in the response body.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/genericError'
+    timePeriodOrRentalIdInvalid:
+      description: The time period or rental ID has an invalid format. A technical error message useful for debugging is provided in the response body.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/genericError'
+    noPermission:
+      description: The user does not have appropriate permissions to perform the operation
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/genericError'
+
+  parameters:
+    vinParam:
+      in: path
+      name: vin
+      required: true
+      description: The Vehicle Identification Number (VIN) as unique number of a vehicle
+      example: "G1YZ23J9P58034278"
+      style: simple
+      schema:
+        $ref: '#/components/schemas/vin'
+    customerIdParam:
+      in: query
+      name: customerId
+      required: true
+      description: Unique identification of a customer
+      example: d9ChwOvI
+      schema:
+        $ref: '#/components/schemas/customerId'
+    customerIdOptionalParam:
+      in: query
+      name: customerId
+      description: Unique identification of a customer
+      example: d9ChwOvI
+      schema:
+        $ref: '#/components/schemas/customerId'
+    rentalIdParam:
+      in: path
+      name: rentalId
+      required: true
+      description: Unique identification of a rental
+      example: rZ6IIwcD
+      style: simple
+      schema:
+        $ref: '#/components/schemas/rentalId'
+    trunkAccessTokenParam:
+      in: query
+      name: trunkAccessToken
+      required: true
+      description: A trunk access token
+      example: bumrLuCMbumrLuCMbumrLuCM
+      schema:
+        $ref: '#/components/schemas/trunkAccessToken'
+    trunkAccessTokenOptionalParam:
+      in: query
+      name: trunkAccessToken
+      description: A trunk access token
+      example: bumrLuCMbumrLuCMbumrLuCM
+      schema:
+        $ref: '#/components/schemas/trunkAccessToken'
+

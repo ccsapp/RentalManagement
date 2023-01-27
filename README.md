@@ -27,12 +27,15 @@ This will start a MongoDB instance on port 27017 with a default user with admin 
 
 After that, start the Go server with the following environment variables:
 
-| Environment Variable        | Value           |
-|-----------------------------|-----------------|
-| `MONGODB_DATABASE_HOST`     | localhost       |
-| `MONGODB_DATABASE_NAME`     | ccsappvp2rental |
-| `MONGODB_DATABASE_USER`     | root            |
-| `MONGODB_DATABASE_PASSWORD` | example         |
+| Environment Variable                  | Value           | Comment  |
+|---------------------------------------|-----------------|----------|
+| `MONGODB_DATABASE_HOST`               | localhost       |          |
+| `MONGODB_DATABASE_NAME`               | ccsappvp2rental |          |
+| `MONGODB_DATABASE_USER`               | root            |          |
+| `MONGODB_DATABASE_PASSWORD`           | example         |          |
+| `RENTAL_MANAGEMENT_COLLECTION_PREFIX` | someprefix      | optional |
+`RENTAL_MANAGEMENT_COLLECTION_PREFIX` provides a prefix to the collection to rule out that different microservice instances
+try to use the same collection. This is particularly useful for testing as all tests work on the same database.
 
 ## General Setup
 You also need to set the environment variable `RM_DOMAIN_SERVER` to the URL of the Car server.
@@ -46,3 +49,6 @@ The Unit Tests of RentalManagement depend on automatically generated Go mocks.
 You need to install [mockgen](https://github.com/golang/mock#installation) to generate them.
 After the installation, execute `go generate ./...` in the `src` directory of this project.
 The provided API endpoints of RentalManagement are specified in the [API specification](https://git.scc.kit.edu/cm-tm/cm-team/projectwork/pse/application/rentalmanagementdesign).
+
+The test setup loads environment variables from `src/testdata/testdb.env` and ignores the system environment variables.
+Also, it overrides `RENTAL_MANAGEMENT_COLLECTION_PREFIX` with a dynamically generated prefix to avoid conflicts with other tests.

@@ -1,6 +1,8 @@
 // Package car provides primitives to interact with the openapi HTTP API of domain microservice Car.
 package car
 
+//go:generate mockgen -source=client.go -package=mocks -destination=../../mocks/mock_car_client.go
+
 import (
 	"bytes"
 	"context"

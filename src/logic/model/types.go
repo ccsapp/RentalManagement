@@ -104,8 +104,8 @@ type LockStateObject struct {
 	TrunkLockState LockState `json:"trunkLockState"`
 }
 
-// RentalCustomer defines model for rentalCustomer.
-type RentalCustomer struct {
+// Rental defines a model for rentals.
+type Rental struct {
 	// Active Describes whether this rental is active
 	Active bool `json:"active"`
 
@@ -115,26 +115,14 @@ type RentalCustomer struct {
 	// Id Unique identification of a rental
 	Id RentalId `json:"id"`
 
+	// Customer The renting customer
+	Customer *Customer `json:"customer,omitempty"`
+
 	// RentalPeriod A period of time
 	RentalPeriod TimePeriod `json:"rentalPeriod"`
 
 	// Token Trunk access token with time
 	Token *TrunkAccess `json:"token,omitempty"`
-}
-
-// RentalFleetManager defines model for rentalFleetManager.
-type RentalFleetManager struct {
-	// Active Describes whether this rental is active
-	Active bool `json:"active"`
-
-	// Customer The renting customer
-	Customer Customer `json:"customer"`
-
-	// Id Unique identification of a rental
-	Id RentalId `json:"id"`
-
-	// RentalPeriod A period of time
-	RentalPeriod TimePeriod `json:"rentalPeriod"`
 }
 
 // RentalId Unique identification of a rental

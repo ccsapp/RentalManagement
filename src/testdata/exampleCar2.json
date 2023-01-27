@@ -1,0 +1,44 @@
+{
+  "vin": "1FVNY5Y90HP312888",
+  "brand": "Mercedes",
+  "model": "B4",
+  "productionDate": "2023-08-21",
+  "technicalSpecification": {
+    "color": "pink",
+    "weight": 2320,
+    "trunkVolume": 335,
+    "engine": {
+      "type": "130 CDI",
+      "power": 110
+    },
+    "transmission": "MANUAL",
+    "tire": {
+      "manufacturer": "MICHELIN",
+      "type": "195/65R15"
+    },
+    "numberOfSeats": 9,
+    "numberOfDoors": 4,
+    "fuel": "ELECTRIC",
+    "fuelCapacity": "44.0L;15.2kWh",
+    "consumption": {
+      "city": 7.4,
+      "overland": 3.6,
+      "combined": 4.2
+    },
+    "emissions": {
+      "city": 178,
+      "overland": 130,
+      "combined": 144
+    }
+  },
+  "dynamicData": {
+    "doorsLockState": "LOCKED",
+    "engineState": "ON",
+    "fuelLevelPercentage": 28,
+    "position": {
+      "latitude": 50.0069,
+      "longitude": 13.4037
+    },
+    "trunkLockState": "LOCKED"
+  }
+}
