@@ -1,0 +1,8 @@
+# Do not commit automatically generated Go mocks
+*
+
+# include the .gitignore file
+!.gitignore
+
+# allow to generate library mocks
+!library_mockgen.go
