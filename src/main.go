@@ -59,12 +59,12 @@ func newApp(config *Config, dbConnection db.IConnection, dbConfig *db.Config) (*
 
 	crudInstance := database.NewICRUD(dbConnection, dbConfig, util.TimeProvider{})
 	operationsInstance := operations.NewOperations(carClient, crudInstance)
-	controllerInstance := api.NewController(operationsInstance)
+	controllerInstance := api.NewController(operationsInstance, util.TimeProvider{})
 
 	api.RegisterHandlers(app, controllerInstance)
 
-	// Use custom error handling that logs any errors that occur but passes any HTTP errors directly to the client.
-	// Any other errors are converted to HTTP 500 errors.
+	// Use custom error handling that logs any rentalErrors that occur but passes any HTTP rentalErrors directly to the client.
+	// Any other rentalErrors are converted to HTTP 500 rentalErrors.
 	app.Use(func(fun echo.HandlerFunc) echo.HandlerFunc {
 		return func(c echo.Context) error {
 			if err := fun(c); err != nil {
@@ -116,6 +116,8 @@ func loadConfig() (*Config, error) {
 }
 
 func main() {
+	util.InitRandom()
+
 	config, err := loadConfig()
 	if err != nil {
 		log.Fatal(err)

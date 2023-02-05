@@ -5,16 +5,20 @@ import (
 	"time"
 )
 
-// Rental A rental
+type Car struct {
+	// Vin Vehicle Identification Number
+	Vin model.Vin `bson:"_id"`
+
+	// Rentals all rentals for this car
+	Rentals []Rental `bson:"rentals"`
+}
+
 type Rental struct {
 	// RentalId Unique identification of a rental
-	RentalId model.RentalId `bson:"_id"`
+	RentalId model.RentalId `bson:"rentalId"`
 
 	// CustomerId Unique identification of a customer
 	CustomerId model.CustomerId `bson:"customer"`
-
-	// Car The car associated with this rental
-	Car model.Vin `bson:"car"`
 
 	// RentalPeriod The time the rental is active, that is the time the car is rented
 	RentalPeriod TimePeriod `bson:"rentalPeriod"`
@@ -23,7 +27,6 @@ type Rental struct {
 	TrunkToken *TrunkAccessToken `bson:"trunkToken,omitempty"`
 }
 
-// TimePeriod A time period
 type TimePeriod struct {
 	// StartDate Beginning of the time period
 	StartDate time.Time `bson:"startDate"`

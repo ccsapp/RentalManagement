@@ -13,7 +13,7 @@ import (
 // IConnection is a low level interface to the database.
 type IConnection interface {
 	// CleanUpDatabase closes the connection to the database. You should defer a call to this method after calling
-	// NewDbConnection. Any errors are unexpected.
+	// NewDbConnection. Any rentalErrors are unexpected.
 	CleanUpDatabase() error
 
 	// GetFactory gets a factory to create queries for this connection.
@@ -23,7 +23,7 @@ type IConnection interface {
 	// unique ID, or the _id field is used if it is already set. This field is expected to be a string.
 	// The result of the insert is returned.
 	// This method returns a DuplicateKeyError if a document with the given ID already exists.
-	// Any other errors are unexpected.
+	// Any other rentalErrors are unexpected.
 	Insert(ctx context.Context, collection string, document any) (ID, error)
 
 	// FindOne returns a single document from the specified collection that matches the given filter
@@ -37,10 +37,13 @@ type IConnection interface {
 	FindMany(ctx context.Context, collection string, filter Filter, options *Options, results any) error
 
 	// UpdateOne applies the supplied update query on the first document with the given filter.
-	// Returns a NoDocumentsError if no document matched the filter.
-	UpdateOne(ctx context.Context, collection string, filter Filter, update Update) error
+	// If upsert is true, a new document is created based on the filter if no document matched the filter.
+	// Returns a NoDocumentsError if no document matched the filter and upsert was set to false.
+	// Returns a DuplicateKeyError if upsert was set to true and the update query would create a document with a
+	// duplicate ID.
+	UpdateOne(ctx context.Context, collection string, filter Filter, update Update, upsert bool) error
 
-	// DropCollection drops a given collection. This is a destructive operation and should only be used for testing.
+	// DropCollection drops a given collection. This is a destructive relation and should only be used for testing.
 	DropCollection(ctx context.Context, collection string) error
 }
 
@@ -62,7 +65,7 @@ type connection struct {
 
 // NewDbConnection creates a new connection to the database. You should defer a call to the CleanUpDatabase method
 // on the returned IConnection object.
-// Any errors are unexpected.
+// Any rentalErrors are unexpected.
 func NewDbConnection(config *Config) (IConnection, error) {
 	m := connection{factory: &MongoFactory{}}
 	return &m, m.setupDatabase(config)
@@ -113,7 +116,8 @@ func (m *connection) FindOne(ctx context.Context, collection string, filter Filt
 	opts := mongoOptions.FindOne()
 	if options != nil && options.Projection != nil {
 		opts = opts.SetProjection(options.Projection.getProjection())
-	} else if options != nil && options.Sort != nil {
+	}
+	if options != nil && options.Sort != nil {
 		opts = opts.SetSort(options.Sort.getSort())
 	}
 	res := m.database.Collection(collection).FindOne(ctx, filter.getFilter(), opts)
@@ -124,11 +128,14 @@ func (m *connection) FindOne(ctx context.Context, collection string, filter Filt
 	return err
 }
 
-func (m *connection) FindMany(ctx context.Context, collection string, filter Filter, options *Options, results any) error {
+func (m *connection) FindMany(ctx context.Context, collection string, filter Filter, options *Options,
+	results any) error {
+
 	opts := mongoOptions.Find()
 	if options != nil && options.Projection != nil {
 		opts = opts.SetProjection(options.Projection.getProjection())
-	} else if options != nil && options.Sort != nil {
+	}
+	if options != nil && options.Sort != nil {
 		opts = opts.SetSort(options.Sort.getSort())
 	}
 	res, err := m.database.Collection(collection).Find(ctx, filter.getFilter(), opts)
@@ -138,12 +145,20 @@ func (m *connection) FindMany(ctx context.Context, collection string, filter Fil
 	return res.All(ctx, results)
 }
 
-func (m *connection) UpdateOne(ctx context.Context, collection string, filter Filter, update Update) error {
-	res, err := m.database.Collection(collection).UpdateOne(ctx, filter.getFilter(), update.getUpdate())
+func (m *connection) UpdateOne(ctx context.Context, collection string, filter Filter, update Update,
+	upsert bool) error {
+
+	opts := mongoOptions.Update()
+	opts.SetUpsert(upsert)
+
+	res, err := m.database.Collection(collection).UpdateOne(ctx, filter.getFilter(), update.getUpdate(), opts)
+	if upsert && mongo.IsDuplicateKeyError(err) {
+		return DuplicateKeyError
+	}
 	if err != nil {
 		return err
 	}
-	if res.MatchedCount == 0 {
+	if !upsert && res.MatchedCount == 0 {
 		return NoDocumentsError
 	}
 	return nil

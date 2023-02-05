@@ -141,7 +141,7 @@ type TechnicalSpecification struct {
 		// Combined Data that specifies the combined amount of fuel that is consumed in: kW / 100 km or l / 100 km
 		Combined float32 `json:"combined"`
 
-		// Overland Data that specifies the amount of fuel that is consumed when driving outside of a city in: kW/100km or l/100km
+		// Overland Data that specifies the amount of fuel that is consumed when driving outside a city in: kW/100km or l/100km
 		Overland float32 `json:"overland"`
 	} `json:"consumption"`
 
@@ -153,7 +153,7 @@ type TechnicalSpecification struct {
 		// Combined Data that specifies the combined amount of emissions in: g CO2 / km. The combination is done by the manufacturer according to an industry-specific standard
 		Combined float32 `json:"combined"`
 
-		// Overland Data that specifies the amount of emissions when driving outside of a city in: g CO2 / km
+		// Overland Data that specifies the amount of emissions when driving outside a city in: g CO2 / km
 		Overland float32 `json:"overland"`
 	} `json:"emissions"`
 

@@ -1,0 +1,14 @@
+[
+  {
+    "vin": "WVWAA71K08W201030",
+    "brand": "Audi",
+    "model": "A3",
+    "numberOfSeats": 7
+  },
+  {
+    "vin": "1FVNY5Y90HP312888",
+    "brand": "Mercedes",
+    "model": "B4",
+    "numberOfSeats": 9
+  }
+]

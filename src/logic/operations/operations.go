@@ -3,6 +3,11 @@ package operations
 import (
 	"RentalManagement/infrastructure/car"
 	"RentalManagement/infrastructure/database"
+	"RentalManagement/logic/model"
+	"RentalManagement/logic/rentalErrors"
+	"context"
+	"fmt"
+	"net/http"
 )
 
 type operations struct {
@@ -15,4 +20,72 @@ func NewOperations(carClient car.ClientWithResponsesInterface, crud database.ICR
 		carClient: carClient,
 		crud:      crud,
 	}
+}
+
+func (o *operations) GetAvailableCars(ctx context.Context, timePeriod model.TimePeriod) (*[]model.CarAvailable, error) {
+	carsResponse, err := o.carClient.GetCarsWithResponse(ctx)
+	if err != nil {
+		return nil, err
+	}
+	if carsResponse.ParsedVins == nil {
+		return nil, fmt.Errorf("%w: unknown error (status code %d)", rentalErrors.ErrDomainAssertion,
+			carsResponse.StatusCode())
+	}
+
+	allCars := carsResponse.ParsedVins
+	unavailableCars, err := o.crud.GetUnavailableCars(ctx, timePeriod)
+
+	if err != nil {
+		return nil, err
+	}
+
+	unavailable := map[model.Vin]bool{}
+	for _, vin := range *unavailableCars {
+		unavailable[vin] = true
+	}
+
+	availableCars := make([]model.CarAvailable, 0, len(*allCars)-len(*unavailableCars))
+	for _, vin := range *allCars {
+		if !unavailable[vin] {
+			availableCar, err := o.getAvailableCar(ctx, vin)
+			if err != nil {
+				return nil, err
+			}
+			availableCars = append(availableCars, *availableCar)
+		}
+	}
+	return &availableCars, nil
+}
+
+func (o *operations) getAvailableCar(ctx context.Context, vin model.Vin) (*model.CarAvailable, error) {
+	carResponse, err := o.carClient.GetCarWithResponse(ctx, vin)
+	if err != nil {
+		return nil, err
+	}
+	if carResponse.ParsedCar == nil {
+		return nil, fmt.Errorf("%w: unknown car %s (maybe the domain service is a little bit forgetful?)",
+			rentalErrors.ErrDomainAssertion, vin)
+	}
+	return car.MapToCarAvailable(carResponse.ParsedCar), nil
+}
+
+func (o *operations) CreateRental(ctx context.Context, vin model.Vin, customerID model.CustomerId, timePeriod model.TimePeriod) error {
+	if err := o.ensureCarExists(ctx, vin); err != nil {
+		return err
+	}
+	return o.crud.CreateRental(ctx, vin, customerID, timePeriod)
+}
+
+func (o *operations) ensureCarExists(ctx context.Context, vin model.Vin) error {
+	carResponse, err := o.carClient.GetCarWithResponse(ctx, vin)
+	if err != nil {
+		return err
+	}
+	if carResponse.StatusCode() == http.StatusNotFound {
+		return rentalErrors.ErrCarNotFound
+	}
+	if carResponse.ParsedCar == nil {
+		return rentalErrors.ErrDomainAssertion
+	}
+	return nil
 }

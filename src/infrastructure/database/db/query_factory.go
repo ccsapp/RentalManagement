@@ -1,11 +1,8 @@
 package db
 
-import "go.mongodb.org/mongo-driver/bson"
-
 // QueryFactory defines methods that provide parameters to interact with a database
 // through an instance of the IConnection interface.
 type QueryFactory interface {
-
 	// Create filter query parameters that is filters that select entries of the database
 
 	// FilterMatch creates a filter that matches documents with the fields provided in the given bson annotated document
@@ -14,14 +11,24 @@ type QueryFactory interface {
 	FilterEqual(fieldName string, value interface{}) Filter
 	// FilterLessEqual creates a filter that matches documents with the given field less or equal to the given value
 	FilterLessEqual(fieldName string, value interface{}) Filter
+	// FilterLess creates a filter that matches documents with the given field less than the given value
+	FilterLess(fieldName string, value interface{}) Filter
 	// FilterGreaterEqual creates a filter that matches documents with the given field greater or equal to the given value
 	FilterGreaterEqual(fieldName string, value interface{}) Filter
+	// FilterGreater creates a filter that matches documents with the given field greater than the given value
+	FilterGreater(fieldName string, value interface{}) Filter
 	// FilterAnd creates a filter that matches documents that matches filter1 and filter2
 	FilterAnd(filter1 Filter, filter2 Filter) Filter
 	// FilterOr creates a filter that matches documents that matches filter1 or filter2
 	FilterOr(filter1 Filter, filter2 Filter) Filter
+	// FilterNot creates a filter that matches documents that do not match filter
+	FilterNot(filter Filter) Filter
 	// FilterEverything creates a filter that matches any document
 	FilterEverything() Filter
+
+	// FilterElementMatch creates a filter that matches documents that have an array field with at least one element
+	// that matches the filter
+	FilterElementMatch(fieldName string, filter Filter) Filter
 
 	// Create sort query parameters that is a sorting order for the returned documents
 
@@ -44,6 +51,8 @@ type QueryFactory interface {
 	// UpdateMultiple creates an update request that updates all fields present in document.
 	// The IDs of the documents must match if supplied.
 	UpdateMultiple(document interface{}) Update
+	// UpdatePush creates an update request that adds value to an array field.
+	UpdatePush(fieldName string, value interface{}) Update
 }
 
 type Filter interface {
@@ -92,61 +101,4 @@ type update struct {
 
 func (u *update) getUpdate() any {
 	return u.update
-}
-
-type MongoFactory struct{}
-
-func (f *MongoFactory) FilterMatch(document interface{}) Filter {
-	return &filter{document}
-}
-
-func (f *MongoFactory) FilterEqual(fieldName string, value interface{}) Filter {
-	return &filter{bson.D{{fieldName, value}}}
-}
-
-func (f *MongoFactory) FilterLessEqual(fieldName string, value interface{}) Filter {
-	return &filter{bson.D{{fieldName, bson.D{{"$lte", value}}}}}
-}
-
-func (f *MongoFactory) FilterGreaterEqual(fieldName string, value interface{}) Filter {
-	return &filter{bson.D{{fieldName, bson.D{{"$gte", value}}}}}
-}
-
-func (f *MongoFactory) FilterAnd(filter1 Filter, filter2 Filter) Filter {
-	return &filter{bson.D{{"$and", bson.A{filter1, filter2}}}}
-}
-
-func (f *MongoFactory) FilterOr(filter1 Filter, filter2 Filter) Filter {
-	return &filter{bson.D{{"$or", bson.A{filter1, filter2}}}}
-}
-
-func (f *MongoFactory) FilterEverything() Filter {
-	return &filter{bson.D{}}
-}
-
-func (f *MongoFactory) SortAsc(fieldName string) Sort {
-	return &sort{bson.D{{fieldName, 1}}}
-}
-
-func (f *MongoFactory) SortDesc(fieldName string) Sort {
-	return &sort{bson.D{{fieldName, -1}}}
-}
-
-func (f *MongoFactory) ProjectionSingle(fieldName string) Projection {
-	if fieldName == "_id" {
-		return f.ProjectionID()
-	}
-	return &projection{bson.D{{"_id", 0}, {fieldName, 1}}}
-}
-
-func (f *MongoFactory) ProjectionID() Projection {
-	return &projection{bson.D{{"_id", 1}}}
-}
-
-func (f *MongoFactory) UpdateSingle(fieldName string, value interface{}) Update {
-	return &update{bson.D{{"$set", bson.D{{fieldName, value}}}}}
-}
-
-func (f *MongoFactory) UpdateMultiple(document interface{}) Update {
-	return &update{bson.D{{"$set", document}}}
 }
