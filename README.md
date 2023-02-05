@@ -31,13 +31,13 @@ This will start a MongoDB instance on port 27017 with a default user with admin 
 
 After that, start the Go server with the following environment variables:
 
-| Environment Variable                  | Value           | Comment  |
-|---------------------------------------|-----------------|----------|
-| `MONGODB_DATABASE_HOST`               | localhost       |          |
-| `MONGODB_DATABASE_NAME`               | ccsappvp2rental |          |
-| `MONGODB_DATABASE_USER`               | root            |          |
-| `MONGODB_DATABASE_PASSWORD`           | example         |          |
-| `RENTAL_MANAGEMENT_COLLECTION_PREFIX` | someprefix      | optional |
+| Environment Variable                  | Value            | Comment  |
+|---------------------------------------|------------------|----------|
+| `MONGODB_DATABASE_HOST`               | localhost        |          |
+| `MONGODB_DATABASE_NAME`               | ccsappvp2rentals |          |
+| `MONGODB_DATABASE_USER`               | root             |          |
+| `MONGODB_DATABASE_PASSWORD`           | example          |          |
+| `RENTAL_MANAGEMENT_COLLECTION_PREFIX` | someprefix       | optional |
 
 `RENTAL_MANAGEMENT_COLLECTION_PREFIX` provides a prefix to the collection to rule out that different microservice instances
 try to use the same collection. This is particularly useful for testing as all tests work on the same database.

@@ -21,10 +21,10 @@ func mapTimePeriodFromDb(period *entities.TimePeriod) model.TimePeriod {
 	}
 }
 
-func MapRentalSliceToVinSlice(rentals *[]entities.Rental) []model.Vin {
-	vins := make([]model.Vin, len(*rentals))
-	for i, rental := range *rentals {
-		vins[i] = rental.Car
+func MapCarSliceToVinSlice(cars *[]entities.Car) []model.Vin {
+	vins := make([]model.Vin, len(*cars))
+	for i, car := range *cars {
+		vins[i] = car.Vin
 	}
 	return vins
 }
@@ -53,10 +53,11 @@ func isActive(period *entities.TimePeriod, currentTime time.Time) bool {
 	return period.StartDate.Before(currentTime) && period.EndDate.After(currentTime)
 }
 
-func MapRentalFromDb(rental *entities.Rental, timeProvider util.ITimeProvider) model.Rental {
+// mapRentalFromDb only sets the VIN of the car
+func mapRentalFromDb(rental *entities.Rental, vin model.Vin, timeProvider util.ITimeProvider) model.Rental {
 	return model.Rental{
 		Active:       isActive(&rental.RentalPeriod, timeProvider.Now()),
-		Car:          &model.Car{Vin: rental.Car},
+		Car:          &model.Car{Vin: vin},
 		Customer:     &model.Customer{CustomerId: rental.CustomerId},
 		Id:           rental.RentalId,
 		RentalPeriod: mapTimePeriodFromDb(&rental.RentalPeriod),
@@ -64,10 +65,18 @@ func MapRentalFromDb(rental *entities.Rental, timeProvider util.ITimeProvider) m
 	}
 }
 
-func MapRentalSliceFromDb(rentals *[]entities.Rental, timeProvider util.ITimeProvider) []model.Rental {
-	modelRentals := make([]model.Rental, len(*rentals))
-	for i, rental := range *rentals {
-		modelRentals[i] = MapRentalFromDb(&rental, timeProvider)
+func MapCarFromDbToRentals(car *entities.Car, timeProvider util.ITimeProvider) []model.Rental {
+	rentals := make([]model.Rental, len(car.Rentals))
+	for i, rental := range car.Rentals {
+		rentals[i] = mapRentalFromDb(&rental, car.Vin, timeProvider)
 	}
-	return modelRentals
+	return rentals
+}
+
+func MapCarsFromDbToRentals(cars *[]entities.Car, timeProvider util.ITimeProvider) []model.Rental {
+	rentals := make([]model.Rental, 0)
+	for _, car := range *cars {
+		rentals = append(rentals, MapCarFromDbToRentals(&car, timeProvider)...)
+	}
+	return rentals
 }

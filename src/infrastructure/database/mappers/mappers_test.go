@@ -10,10 +10,32 @@ import (
 	"time"
 )
 
+var carVin1 = "G1YZ23J9P58034278"
+var carVin2 = "1GKLVNED8AJ200101"
+
+var car1 = entities.Car{
+	Vin: carVin1,
+	Rentals: []entities.Rental{
+		rental1,
+		rental2,
+	},
+}
+
+var car2 = entities.Car{
+	Vin: carVin2,
+	Rentals: []entities.Rental{
+		rental3,
+	},
+}
+
+var cars = []entities.Car{
+	car1,
+	car2,
+}
+
 var rental1 = entities.Rental{
 	RentalId:   "rZ6IIwcD",
 	CustomerId: "M9hUnd8a",
-	Car:        "G1YZ23J9P58034278",
 	RentalPeriod: entities.TimePeriod{
 		StartDate: time.Date(2023, 2, 1, 0, 0, 0, 0, time.UTC),
 		EndDate:   time.Date(2023, 3, 1, 0, 0, 0, 0, time.UTC),
@@ -21,22 +43,9 @@ var rental1 = entities.Rental{
 	TrunkToken: nil,
 }
 
-var rentalModel1 = model.Rental{
-	Active:   true,
-	Car:      &model.Car{Vin: "G1YZ23J9P58034278"},
-	Customer: &model.Customer{CustomerId: "M9hUnd8a"},
-	Id:       "rZ6IIwcD",
-	RentalPeriod: model.TimePeriod{
-		StartDate: time.Date(2023, 2, 1, 0, 0, 0, 0, time.UTC),
-		EndDate:   time.Date(2023, 3, 1, 0, 0, 0, 0, time.UTC),
-	},
-	Token: nil,
-}
-
 var rental2 = entities.Rental{
 	RentalId:   "8J7szB1d",
 	CustomerId: "d9COw9vI",
-	Car:        "1GKLVNED8AJ200101",
 	RentalPeriod: entities.TimePeriod{
 		StartDate: time.Date(2023, 2, 10, 0, 0, 0, 0, time.UTC),
 		EndDate:   time.Date(2023, 2, 11, 0, 0, 0, 0, time.UTC),
@@ -50,9 +59,31 @@ var rental2 = entities.Rental{
 	},
 }
 
-var rentalModel2 = model.Rental{
+var rental3 = entities.Rental{
+	RentalId:   "u8NbZuNa",
+	CustomerId: "nM8nB6Zu",
+	RentalPeriod: entities.TimePeriod{
+		StartDate: time.Date(2020, 1, 9, 0, 0, 0, 0, time.UTC),
+		EndDate:   time.Date(2020, 1, 8, 0, 0, 0, 0, time.UTC),
+	},
+	TrunkToken: nil,
+}
+
+var rentalModel1Car1 = model.Rental{
+	Active:   true,
+	Car:      &model.Car{Vin: "G1YZ23J9P58034278"},
+	Customer: &model.Customer{CustomerId: "M9hUnd8a"},
+	Id:       "rZ6IIwcD",
+	RentalPeriod: model.TimePeriod{
+		StartDate: time.Date(2023, 2, 1, 0, 0, 0, 0, time.UTC),
+		EndDate:   time.Date(2023, 3, 1, 0, 0, 0, 0, time.UTC),
+	},
+	Token: nil,
+}
+
+var rentalModel2Car1 = model.Rental{
 	Active:   false,
-	Car:      &model.Car{Vin: "1GKLVNED8AJ200101"},
+	Car:      &model.Car{Vin: "G1YZ23J9P58034278"},
 	Customer: &model.Customer{CustomerId: "d9COw9vI"},
 	Id:       "8J7szB1d",
 	RentalPeriod: model.TimePeriod{
@@ -68,45 +99,57 @@ var rentalModel2 = model.Rental{
 	},
 }
 
-var rentalsModel = []model.Rental{rentalModel1, rentalModel2}
-var rentals = []entities.Rental{rental1, rental2}
-var vins = []model.Vin{rental1.Car, rental2.Car}
+var rentalModel3Car2 = model.Rental{
+	Active:   false,
+	Car:      &model.Car{Vin: "1GKLVNED8AJ200101"},
+	Customer: &model.Customer{CustomerId: "nM8nB6Zu"},
+	Id:       "u8NbZuNa",
+	RentalPeriod: model.TimePeriod{
+		StartDate: time.Date(2020, 1, 9, 0, 0, 0, 0, time.UTC),
+		EndDate:   time.Date(2020, 1, 8, 0, 0, 0, 0, time.UTC),
+	},
+	Token: nil,
+}
+
+var rentalsModelCar1 = []model.Rental{rentalModel1Car1, rentalModel2Car1}
+var rentalsModelAll = []model.Rental{rentalModel1Car1, rentalModel2Car1, rentalModel3Car2}
+var vins = []model.Vin{carVin1, carVin2}
 
 var currentTime = time.Date(2023, 2, 2, 3, 10, 12, 100, time.UTC)
 
 func TestMapTimePeriodToDb(t *testing.T) {
-	assert.Equal(t, rental2.RentalPeriod, MapTimePeriodToDb(&rentalModel2.RentalPeriod))
+	assert.Equal(t, rental2.RentalPeriod, MapTimePeriodToDb(&rentalModel2Car1.RentalPeriod))
 }
 
-func TestMapRentalSliceToVinSlice(t *testing.T) {
-	assert.Equal(t, vins, MapRentalSliceToVinSlice(&rentals))
+func TestMapCarSliceToVinSlice(t *testing.T) {
+	assert.Equal(t, vins, MapCarSliceToVinSlice(&cars))
 }
 
 func TestMapTokenToDb(t *testing.T) {
-	assert.Equal(t, rental2.TrunkToken, MapTokenToDb(rentalModel2.Token))
+	assert.Equal(t, rental2.TrunkToken, MapTokenToDb(rentalModel2Car1.Token))
 }
 
 func TestMapTokenToDb_Nil(t *testing.T) {
 	assert.Nil(t, MapTokenToDb(nil))
 }
 
-func TestMapRentalFromDb(t *testing.T) {
+func TestMapCarFromDbToRentals(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 	tp := mocks.NewMockITimeProvider(ctrl)
 	tp.EXPECT().Now().Return(currentTime)
 	tp.EXPECT().Now().Return(currentTime)
 
-	assert.Equal(t, rentalModel1, MapRentalFromDb(&rental1, tp))
-	assert.Equal(t, rentalModel2, MapRentalFromDb(&rental2, tp))
+	assert.Equal(t, rentalsModelCar1, MapCarFromDbToRentals(&car1, tp))
 }
 
-func TestMapRentalSliceFromDb(t *testing.T) {
+func TestMapCarsFromDbToRentals(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 	tp := mocks.NewMockITimeProvider(ctrl)
 	tp.EXPECT().Now().Return(currentTime)
 	tp.EXPECT().Now().Return(currentTime)
+	tp.EXPECT().Now().Return(currentTime)
 
-	assert.Equal(t, rentalsModel, MapRentalSliceFromDb(&rentals, tp))
+	assert.Equal(t, rentalsModelAll, MapCarsFromDbToRentals(&cars, tp))
 }
