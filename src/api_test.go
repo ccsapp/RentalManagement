@@ -4,13 +4,12 @@ import (
 	"RentalManagement/infrastructure/database"
 	"RentalManagement/infrastructure/database/db"
 	"RentalManagement/testdata"
+	"RentalManagement/testhelpers"
 	"context"
 	"fmt"
 	"github.com/labstack/echo/v4"
 	"github.com/steinfletcher/apitest"
 	"github.com/stretchr/testify/suite"
-	"hash"
-	"hash/fnv"
 	"net/http"
 	"testing"
 	"time"
@@ -18,39 +17,11 @@ import (
 
 type ApiTestSuite struct {
 	suite.Suite
-	dbConnection db.IConnection
-	collection   string
-	app          *echo.Echo
-	config       *Config
-	formatter    *recordingFormatter
-}
-
-type recordingFormatter struct {
-	recorder *apitest.Recorder
-	hash     hash.Hash32
-}
-
-func newRecordingFormatter() *recordingFormatter {
-	return &recordingFormatter{recorder: apitest.NewTestRecorder(), hash: fnv.New32a()}
-}
-
-func (rf *recordingFormatter) Format(recorder *apitest.Recorder) {
-	// append the events to the existing events
-	rf.recorder.Events = append(rf.recorder.Events, recorder.Events...)
-	_, err := rf.hash.Write(([]byte)(recorder.Meta["hash"].(string)))
-	if err != nil {
-		// this cannot happen
-		panic(err)
-	}
-
-	meta := make(map[string]interface{})
-	meta["hash"] = fmt.Sprintf("%d", rf.hash.Sum32())
-
-	rf.recorder.AddMeta(meta)
-}
-
-func (rf *recordingFormatter) SetTitle(title string) {
-	rf.recorder.AddTitle(title)
+	dbConnection       db.IConnection
+	collection         string
+	app                *echo.Echo
+	config             *Config
+	recordingFormatter *testhelpers.RecordingFormatter
 }
 
 func (suite *ApiTestSuite) SetupSuite() {
@@ -78,7 +49,7 @@ func (suite *ApiTestSuite) SetupSuite() {
 }
 
 func (suite *ApiTestSuite) SetupTest() {
-	suite.formatter = newRecordingFormatter()
+	suite.recordingFormatter = testhelpers.NewRecordingFormatter()
 }
 
 func (suite *ApiTestSuite) TearDownSuite() {
@@ -90,9 +61,11 @@ func (suite *ApiTestSuite) TearDownSuite() {
 
 func (suite *ApiTestSuite) TearDownTest() {
 	// generate the sequence diagram for the test
-	suite.formatter.SetTitle(suite.T().Name())
+	suite.recordingFormatter.SetOutFileName(suite.T().Name())
+	suite.recordingFormatter.SetTitle(suite.T().Name())
+
 	diagramFormatter := apitest.SequenceDiagram()
-	diagramFormatter.Format(suite.formatter.recorder)
+	diagramFormatter.Format(suite.recordingFormatter.GetRecorder())
 
 	// clear the collection after each test
 	if err := suite.dbConnection.DropCollection(context.Background(), suite.collection); err != nil {
@@ -109,7 +82,7 @@ func (suite *ApiTestSuite) newApiTestWithMocks(handler http.Handler, mocks []*ap
 		Mocks(mocks...).
 		Debug().
 		Handler(handler).
-		Report(suite.formatter)
+		Report(suite.recordingFormatter)
 }
 
 func (suite *ApiTestSuite) newApiTestWithCarMock(handler http.Handler) *apitest.APITest {
