@@ -67,6 +67,9 @@ func (suite *ApiTestSuite) SetupSuite() {
 	suite.collection = dbConfig.CollectionPrefix + database.CollectionBaseName
 
 	suite.dbConnection, err = db.NewDbConnection(dbConfig)
+	if err != nil {
+		suite.T().Fatal(err.Error())
+	}
 
 	suite.app, err = newApp(suite.config, suite.dbConnection, dbConfig)
 	if err != nil {
