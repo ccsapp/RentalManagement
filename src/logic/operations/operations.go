@@ -89,3 +89,17 @@ func (o *operations) ensureCarExists(ctx context.Context, vin model.Vin) error {
 	}
 	return nil
 }
+
+func (o *operations) GetCar(ctx context.Context, vin model.Vin) (*model.Car, error) {
+	carResponse, err := o.carClient.GetCarWithResponse(ctx, vin)
+	if err != nil {
+		return nil, err
+	}
+	if carResponse.StatusCode() == http.StatusNotFound {
+		return nil, rentalErrors.ErrCarNotFound
+	}
+	if carResponse.ParsedCar == nil {
+		return nil, rentalErrors.ErrDomainAssertion
+	}
+	return car.MapToCarStatic(carResponse.ParsedCar), nil
+}
