@@ -70,7 +70,35 @@ var domainCar = carTypes.Car{
 		TrunkVolume:  1000,
 		Weight:       2000,
 	},
-	Vin: "1FVNY5Y90HP312888",
+	Vin: vin2,
+}
+
+var rentalCrud = model.Rental{
+	Active:   true,
+	Car:      &model.Car{Vin: domainCar.Vin},
+	Customer: &model.Customer{CustomerId: exampleCustomerID},
+	Id:       "rZ6IIwcD",
+	RentalPeriod: model.TimePeriod{
+		EndDate:   time.Date(2023, 4, 2, 3, 0, 0, 0, time.UTC),
+		StartDate: time.Date(2023, 3, 3, 1, 0, 0, 0, time.UTC),
+	},
+	Token: &model.TrunkAccess{
+		Token: "bumrLuCMbumrLuCMbumrLuCM",
+		ValidityPeriod: model.TimePeriod{
+			EndDate:   time.Date(2023, 3, 3, 1, 0, 0, 0, time.UTC),
+			StartDate: time.Date(2023, 3, 2, 3, 0, 0, 0, time.UTC),
+		},
+	},
+}
+
+var rentalCustomerShort = model.Rental{
+	Active: true,
+	Car:    &model.Car{Vin: domainCar.Vin, Brand: "Tesla", Model: "Model X"},
+	Id:     "rZ6IIwcD",
+	RentalPeriod: model.TimePeriod{
+		EndDate:   time.Date(2023, 4, 2, 3, 0, 0, 0, time.UTC),
+		StartDate: time.Date(2023, 3, 3, 1, 0, 0, 0, time.UTC),
+	},
 }
 
 var staticCar = model.Car{
@@ -304,4 +332,109 @@ func TestOperations_GetCar_carNotFound(t *testing.T) {
 
 	assert.ErrorIs(t, err, rentalErrors.ErrCarNotFound)
 	assert.Nil(t, retCar)
+}
+
+func TestOperations_GetOverview_success(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	ctx := context.Background()
+
+	mockCar := mocks.NewMockClientWithResponsesInterface(ctrl)
+	mockCar.EXPECT().GetCarWithResponse(ctx, vin2).Return(&car.GetCarResponse{ParsedCar: &domainCar}, nil)
+
+	mockCrud := mocks.NewMockICRUD(ctrl)
+	mockCrud.EXPECT().GetRentalsOfCustomer(ctx, exampleCustomerID).Return(&[]model.Rental{rentalCrud}, nil)
+
+	operations := NewOperations(mockCar, mockCrud)
+	rentals, err := operations.GetOverview(ctx, exampleCustomerID)
+
+	assert.Nil(t, err)
+	assert.Equal(t, &[]model.Rental{rentalCustomerShort}, rentals)
+}
+
+func TestOperations_GetOverview_CrudError(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	ctx := context.Background()
+	crudError := errors.New("crud error")
+
+	mockCar := mocks.NewMockClientWithResponsesInterface(ctrl)
+
+	mockCrud := mocks.NewMockICRUD(ctrl)
+	mockCrud.EXPECT().GetRentalsOfCustomer(ctx, exampleCustomerID).Return(nil, crudError)
+
+	operations := NewOperations(mockCar, mockCrud)
+	rentals, err := operations.GetOverview(ctx, exampleCustomerID)
+
+	assert.ErrorIs(t, err, crudError)
+	assert.Nil(t, rentals)
+}
+
+func TestOperations_GetOverview_DomainError(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	ctx := context.Background()
+
+	domainError := errors.New("domain error")
+
+	mockCar := mocks.NewMockClientWithResponsesInterface(ctrl)
+	mockCar.EXPECT().GetCarWithResponse(ctx, vin2).Return(nil, domainError)
+
+	mockCrud := mocks.NewMockICRUD(ctrl)
+	mockCrud.EXPECT().GetRentalsOfCustomer(ctx, exampleCustomerID).Return(&[]model.Rental{rentalCrud}, nil)
+
+	operations := NewOperations(mockCar, mockCrud)
+	rentals, err := operations.GetOverview(ctx, exampleCustomerID)
+
+	assert.ErrorIs(t, err, domainError)
+	assert.Nil(t, rentals)
+}
+
+func TestOperations_GetOverview_CarNotFound(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	ctx := context.Background()
+
+	mockCar := mocks.NewMockClientWithResponsesInterface(ctrl)
+	mockCar.EXPECT().GetCarWithResponse(ctx, vin2).Return(&car.GetCarResponse{
+		HTTPResponse: &http.Response{
+			StatusCode: http.StatusNotFound,
+		},
+	}, nil)
+
+	mockCrud := mocks.NewMockICRUD(ctrl)
+	mockCrud.EXPECT().GetRentalsOfCustomer(ctx, exampleCustomerID).Return(&[]model.Rental{rentalCrud}, nil)
+
+	operations := NewOperations(mockCar, mockCrud)
+	rentals, err := operations.GetOverview(ctx, exampleCustomerID)
+
+	assert.ErrorIs(t, err, rentalErrors.ErrDomainAssertion)
+	assert.Nil(t, rentals)
+}
+
+func TestOperations_GetOverview_UnknownDomainResponse(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	ctx := context.Background()
+
+	mockCar := mocks.NewMockClientWithResponsesInterface(ctrl)
+	mockCar.EXPECT().GetCarWithResponse(ctx, vin2).Return(&car.GetCarResponse{
+		HTTPResponse: &http.Response{
+			StatusCode: http.StatusTeapot,
+		},
+	}, nil)
+
+	mockCrud := mocks.NewMockICRUD(ctrl)
+	mockCrud.EXPECT().GetRentalsOfCustomer(ctx, exampleCustomerID).Return(&[]model.Rental{rentalCrud}, nil)
+
+	operations := NewOperations(mockCar, mockCrud)
+	rentals, err := operations.GetOverview(ctx, exampleCustomerID)
+
+	assert.ErrorIs(t, err, rentalErrors.ErrDomainAssertion)
+	assert.Nil(t, rentals)
 }

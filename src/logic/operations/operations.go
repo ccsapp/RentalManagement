@@ -103,3 +103,30 @@ func (o *operations) GetCar(ctx context.Context, vin model.Vin) (*model.Car, err
 	}
 	return car.MapToCarStatic(carResponse.ParsedCar), nil
 }
+
+func (o *operations) GetOverview(ctx context.Context, customerID model.CustomerId) (*[]model.Rental, error) {
+	rentals, err := o.crud.GetRentalsOfCustomer(ctx, customerID)
+	if err != nil {
+		return nil, err
+	}
+
+	for i, rental := range *rentals {
+		carResponse, err := o.carClient.GetCarWithResponse(ctx, rental.Car.Vin)
+		if err != nil {
+			return nil, err
+		}
+		statusCode := carResponse.StatusCode()
+		if statusCode == http.StatusNotFound {
+			return nil, fmt.Errorf("%w: car %s from customer %s not in domain",
+				rentalErrors.ErrDomainAssertion, rental.Car.Vin, customerID)
+		}
+		if carResponse.ParsedCar == nil {
+			return nil, fmt.Errorf("%w: unknown error (domain code %d)",
+				rentalErrors.ErrDomainAssertion, statusCode)
+		}
+		rental.Car = car.MapToCarBase(carResponse.ParsedCar)
+		(*rentals)[i] = rental.ToRentalCustomerShort()
+	}
+
+	return rentals, nil
+}

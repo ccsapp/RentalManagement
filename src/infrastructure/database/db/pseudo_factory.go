@@ -35,6 +35,13 @@ type pseudoUpdate struct {
 	value any
 }
 
+type pseudoNestedFilter struct {
+	arrayName string
+	filter    Filter
+	limit     int
+	sort      Sort
+}
+
 func (f *PseudoFactory) FilterMatch(document interface{}) Filter {
 	return &filter{document}
 }
@@ -120,4 +127,8 @@ func (f *PseudoFactory) UnpackPushUpdate(updateParam Update) (string, interface{
 	}
 
 	return pseudoUpd.field[18:], pseudoUpd.value, nil
+}
+
+func (f *PseudoFactory) ArrayFilterAggregation(arrayName string, filter Filter, limit int, sort Sort) Pipeline {
+	return &pipeline{pseudoNestedFilter{arrayName, filter, limit, sort}}
 }

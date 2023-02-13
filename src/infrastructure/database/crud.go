@@ -20,6 +20,7 @@ const CollectionBaseName = "rentals"
 type ICRUD interface {
 	GetUnavailableCars(ctx context.Context, timePeriod model.TimePeriod) (*[]model.Vin, error)
 	CreateRental(ctx context.Context, vin model.Vin, customerId model.CustomerId, timePeriod model.TimePeriod) error
+	GetRentalsOfCustomer(ctx context.Context, customerID model.CustomerId) (*[]model.Rental, error)
 }
 
 type crud struct {
@@ -104,4 +105,26 @@ func (c *crud) CreateRental(ctx context.Context, vin model.Vin, customerId model
 	}
 
 	return err
+}
+
+func (c *crud) GetRentalsOfCustomer(ctx context.Context, customerID model.CustomerId) (*[]model.Rental, error) {
+	var cars []entities.Car
+
+	factory := c.db.GetFactory()
+
+	err := c.db.Aggregate(
+		ctx, c.collection, factory.ArrayFilterAggregation(
+			"rentals",
+			factory.FilterEqual("rentals.customer", customerID),
+			-1, //no limit
+			nil,
+		), &cars,
+	)
+	if err != nil {
+		return nil, err
+	}
+
+	rentals := mappers.MapCarsFromDbToRentals(&cars, c.timeProvider)
+
+	return &rentals, nil
 }
