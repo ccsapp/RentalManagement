@@ -10,8 +10,11 @@ import (
 	"net/http"
 )
 
-const invalidTimePeriodMessage = "startDate must be before endDate"
-const pastTimePeriodMessage = "startDate must be in the future"
+const (
+	invalidTimePeriodMessage = "startDate must be before endDate"
+	pastTimePeriodMessage    = "startDate must be in the future"
+	carNotFoundMessage       = "car not found"
+)
 
 type controller struct {
 	operations   operations.IOperations
@@ -37,11 +40,17 @@ func (c controller) GetAvailableCars(ctx echo.Context, params model.GetAvailable
 }
 
 func (c controller) GetCar(ctx echo.Context, vin model.VinParam) error {
-	// TODO implement me
-	panic("implement me")
+	car, err := c.operations.GetCar(ctx.Request().Context(), vin)
+	if errors.Is(err, rentalErrors.ErrCarNotFound) {
+		return echo.NewHTTPError(http.StatusNotFound, carNotFoundMessage)
+	}
+	if err != nil {
+		return err
+	}
+	return ctx.JSON(http.StatusOK, car)
 }
 
-func (c controller) GetNextRental(ctx echo.Context, vin model.VinParam) error {
+func (c controller) GetNextRental(echo.Context, model.VinParam) error {
 	// TODO implement me
 	panic("implement me")
 }
@@ -63,7 +72,7 @@ func (c controller) CreateRental(ctx echo.Context, vin model.VinParam, params mo
 
 	err = c.operations.CreateRental(ctx.Request().Context(), vin, params.CustomerId, timePeriod)
 	if errors.Is(err, rentalErrors.ErrCarNotFound) {
-		return echo.NewHTTPError(http.StatusNotFound, "car not found")
+		return echo.NewHTTPError(http.StatusNotFound, carNotFoundMessage)
 	}
 	if errors.Is(err, rentalErrors.ErrConflictingRentalExists) {
 		return echo.NewHTTPError(http.StatusConflict, "conflicting rental exists")
@@ -74,27 +83,27 @@ func (c controller) CreateRental(ctx echo.Context, vin model.VinParam, params mo
 	return ctx.NoContent(http.StatusCreated)
 }
 
-func (c controller) GetLockState(ctx echo.Context, vin model.VinParam, params model.GetLockStateParams) error {
+func (c controller) GetLockState(echo.Context, model.VinParam, model.GetLockStateParams) error {
 	// TODO implement me
 	panic("implement me")
 }
 
-func (c controller) SetLockState(ctx echo.Context, vin model.VinParam, params model.SetLockStateParams) error {
+func (c controller) SetLockState(echo.Context, model.VinParam, model.SetLockStateParams) error {
 	// TODO implement me
 	panic("implement me")
 }
 
-func (c controller) GetOverview(ctx echo.Context, params model.GetOverviewParams) error {
+func (c controller) GetOverview(echo.Context, model.GetOverviewParams) error {
 	// TODO implement me
 	panic("implement me")
 }
 
-func (c controller) GetRentalStatus(ctx echo.Context, rentalId model.RentalIdParam) error {
+func (c controller) GetRentalStatus(echo.Context, model.RentalIdParam) error {
 	// TODO implement me
 	panic("implement me")
 }
 
-func (c controller) GrantTrunkAccess(ctx echo.Context, rentalId model.RentalIdParam) error {
+func (c controller) GrantTrunkAccess(echo.Context, model.RentalIdParam) error {
 	// TODO implement me
 	panic("implement me")
 }

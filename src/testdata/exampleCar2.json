@@ -19,7 +19,7 @@
     "numberOfSeats": 9,
     "numberOfDoors": 4,
     "fuel": "ELECTRIC",
-    "fuelCapacity": "44.0L;15.2kWh",
+    "fuelCapacity": "15.2kWh",
     "consumption": {
       "city": 7.4,
       "overland": 3.6,

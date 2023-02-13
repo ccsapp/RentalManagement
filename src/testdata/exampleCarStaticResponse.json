@@ -2,7 +2,6 @@
   "vin": "WVWAA71K08W201030",
   "brand": "Audi",
   "model": "A3",
-  "productionDate": "2017-07-21",
   "technicalSpecification": {
     "color": "black",
     "weight": 1320,
@@ -12,10 +11,6 @@
       "power": 150
     },
     "transmission": "MANUAL",
-    "tire": {
-      "manufacturer": "GOODYEAR",
-      "type": "185/65R15"
-    },
     "numberOfSeats": 7,
     "numberOfDoors": 3,
     "fuel": "ELECTRIC",
@@ -30,15 +25,5 @@
       "overland": 122,
       "combined": 137
     }
-  },
-  "dynamicData": {
-    "doorsLockState": "UNLOCKED",
-    "engineState": "OFF",
-    "fuelLevelPercentage": 23,
-    "position": {
-      "latitude": 49.0069,
-      "longitude": 8.4037
-    },
-    "trunkLockState": "UNLOCKED"
   }
 }

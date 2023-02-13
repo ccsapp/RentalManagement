@@ -16,8 +16,6 @@ import (
 	"time"
 )
 
-// TODO implement tests when implementing operations methods
-
 var exampleCustomerID = "34tfewss"
 
 var timePeriod = model.TimePeriod{
@@ -60,7 +58,7 @@ var domainCar = carTypes.Car{
 			Power: 25,
 			Type:  "180 CDI",
 		},
-		Fuel:          carTypes.DIESEL,
+		Fuel:          carTypes.HYBRIDDIESEL,
 		FuelCapacity:  "54.0L;85.2kWh",
 		NumberOfDoors: 4,
 		NumberOfSeats: 5,
@@ -72,6 +70,35 @@ var domainCar = carTypes.Car{
 		TrunkVolume:  1000,
 		Weight:       2000,
 	},
+	Vin: "1FVNY5Y90HP312888",
+}
+
+var staticCar = model.Car{
+	Brand: "Tesla",
+	Model: "Model X",
+	TechnicalSpecification: &model.TechnicalSpecification{
+		Color: "black",
+		Consumption: carTypes.TechnicalSpecificationConsumption{
+			City:     10,
+			Combined: 12,
+			Overland: 13,
+		},
+		Emissions: carTypes.TechnicalSpecificationEmissions{
+			City:     17,
+			Combined: 18,
+			Overland: 19,
+		},
+		Engine: carTypes.TechnicalSpecificationEngine{
+			Power: 25,
+			Type:  "180 CDI",
+		},
+		Fuel:          model.HYBRIDDIESEL,
+		FuelCapacity:  "54.0L;85.2kWh",
+		NumberOfDoors: 4,
+		NumberOfSeats: 5,
+		Transmission:  model.MANUAL,
+		TrunkVolume:   1000,
+		Weight:        2000},
 	Vin: "1FVNY5Y90HP312888",
 }
 
@@ -215,4 +242,66 @@ func TestOperations_CreateRental_conflictingRentalExists(t *testing.T) {
 	operations := NewOperations(mockCar, mockCrud)
 	err := operations.CreateRental(ctx, vin1, exampleCustomerID, timePeriod)
 	assert.ErrorIs(t, err, rentalErrors.ErrConflictingRentalExists)
+}
+
+func TestOperations_GetCar_success(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	ctx := context.Background()
+
+	mockCar := mocks.NewMockClientWithResponsesInterface(ctrl)
+	mockCrud := mocks.NewMockICRUD(ctrl)
+
+	mockCar.EXPECT().GetCarWithResponse(ctx, vin1).Return(&car.GetCarResponse{ParsedCar: &domainCar}, nil)
+
+	operations := NewOperations(mockCar, mockCrud)
+	retCar, err := operations.GetCar(ctx, vin1)
+
+	assert.Nil(t, err)
+	assert.Equal(t, &staticCar, retCar)
+}
+
+func TestOperations_GetCar_unexpectedCarResponse(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	ctx := context.Background()
+
+	mockCar := mocks.NewMockClientWithResponsesInterface(ctrl)
+	mockCrud := mocks.NewMockICRUD(ctrl)
+
+	mockCar.EXPECT().GetCarWithResponse(ctx, vin1).Return(&car.GetCarResponse{
+		HTTPResponse: &http.Response{
+			StatusCode: http.StatusTeapot,
+		},
+	}, nil)
+
+	operations := NewOperations(mockCar, mockCrud)
+	retCar, err := operations.GetCar(ctx, vin1)
+
+	assert.ErrorIs(t, err, rentalErrors.ErrDomainAssertion)
+	assert.Nil(t, retCar)
+}
+
+func TestOperations_GetCar_carNotFound(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	ctx := context.Background()
+
+	mockCar := mocks.NewMockClientWithResponsesInterface(ctrl)
+	mockCrud := mocks.NewMockICRUD(ctrl)
+
+	mockCar.EXPECT().GetCarWithResponse(ctx, vin1).Return(&car.GetCarResponse{
+		HTTPResponse: &http.Response{
+			StatusCode: http.StatusNotFound,
+		},
+	}, nil)
+
+	operations := NewOperations(mockCar, mockCrud)
+	retCar, err := operations.GetCar(ctx, vin1)
+
+	assert.ErrorIs(t, err, rentalErrors.ErrCarNotFound)
+	assert.Nil(t, retCar)
 }

@@ -10,4 +10,5 @@ import (
 type IOperations interface {
 	GetAvailableCars(ctx context.Context, timePeriod model.TimePeriod) (*[]model.CarAvailable, error)
 	CreateRental(ctx context.Context, vin model.Vin, customerID model.CustomerId, timePeriod model.TimePeriod) error
+	GetCar(ctx context.Context, vin model.Vin) (*model.Car, error)
 }

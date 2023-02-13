@@ -12,6 +12,9 @@ const VinCar string = "WVWAA71K08W201030"
 //go:embed exampleCar2.json
 var ExampleCar2 string
 
+//go:embed exampleCarStaticResponse.json
+var ExampleCarStaticResponse string
+
 const VinCar2 string = "1FVNY5Y90HP312888"
 
 //go:embed carsAvailableFirst.json
