@@ -41,6 +41,16 @@ var rentalCustomer = Rental{
 	},
 }
 
+var rentalCustomerShort = Rental{
+	Active: true,
+	Car:    &Car{Vin: "G1YZ23J9P58034280"},
+	Id:     "rZ6I3weD",
+	RentalPeriod: TimePeriod{
+		StartDate: time.Date(2023, 2, 10, 0, 0, 0, 0, time.UTC),
+		EndDate:   time.Date(2023, 2, 11, 0, 0, 0, 0, time.UTC),
+	},
+}
+
 var rentalFleetManager = Rental{
 	Active:   true,
 	Customer: &Customer{CustomerId: "d9COwOvI"},
@@ -57,4 +67,8 @@ func TestRental_ToRentalCustomer(t *testing.T) {
 
 func TestRental_ToRentalFleetManager(t *testing.T) {
 	assert.Equal(t, rentalFleetManager, rental.ToRentalFleetManager())
+}
+
+func TestRental_ToRentalCustomerShort(t *testing.T) {
+	assert.Equal(t, rentalCustomerShort, rental.ToRentalCustomerShort())
 }

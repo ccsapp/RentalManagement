@@ -30,6 +30,20 @@ type QueryFactory interface {
 	// that matches the filter
 	FilterElementMatch(fieldName string, filter Filter) Filter
 
+	// ArrayFilterAggregation creates a pipeline that matches documents that have an array field called arrayName
+	// with at least one array element such that the filter matches the document
+	// with the array field replaced by the array element.
+	// The array elements are filtered based on the filter.
+	// The limit parameter limits the total number of array elements in the result after they are sorted.
+	// No limit is applied when limit <= 0.
+	// The sort parameter sorts the array elements in the documents and the documents themselves.
+	// To sort the array elements inside individual documents,
+	// simply sort by the arrayName field, as if it was not an array.
+	// If the sort parameter sorts by multiple fields, they are applied in the order they are given in.
+	// Thus, you have to sort by arrayName with least priority, if it is not to affect the order of the documents
+	// with higher priority than any other sort.
+	ArrayFilterAggregation(arrayName string, filter Filter, limit int, sort Sort) Pipeline
+
 	// Create sort query parameters that is a sorting order for the returned documents
 
 	// SortAsc creates a sorting order that sorts documents in ascending order based on field
@@ -101,4 +115,16 @@ type update struct {
 
 func (u *update) getUpdate() any {
 	return u.update
+}
+
+type Pipeline interface {
+	getPipeline() any
+}
+
+type pipeline struct {
+	pipeline any
+}
+
+func (p *pipeline) getPipeline() any {
+	return p.pipeline
 }

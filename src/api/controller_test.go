@@ -81,6 +81,40 @@ var availableCars = []model.CarAvailable{availableCar1, availableCar2}
 var currentTime = time.Date(2023, 1, 1, 0, 0, 0, 0, time.UTC)
 var future = time.Date(2090, 2, 1, 0, 0, 0, 0, time.UTC)
 
+var carBase1 = model.Car{
+	Vin:   "3VW217AU9FM500158",
+	Brand: "Volkswagen",
+	Model: "Golf",
+}
+
+var carBase2 = model.Car{
+	Vin:   "WVWAA71K08W201030",
+	Brand: "Audi",
+	Model: "A3",
+}
+
+var rentalCustomerShort1 = model.Rental{
+	Active: false,
+	Car:    &carBase1,
+	Id:     "M9hUnd8a",
+	RentalPeriod: model.TimePeriod{
+		EndDate:   time.Date(2023, 3, 2, 3, 0, 0, 0, time.UTC),
+		StartDate: time.Date(2023, 4, 3, 1, 0, 0, 0, time.UTC),
+	},
+}
+
+var rentalCustomerShort2 = model.Rental{
+	Active: true,
+	Car:    &carBase2,
+	Id:     "P2zUdL3C",
+	RentalPeriod: model.TimePeriod{
+		EndDate:   time.Date(2023, 1, 2, 3, 0, 0, 0, time.UTC),
+		StartDate: time.Date(2023, 3, 3, 1, 0, 0, 0, time.UTC),
+	},
+}
+
+var customerRentalsShort = []model.Rental{rentalCustomerShort1, rentalCustomerShort2}
+
 func TestController_GetAvailableCars_success(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
@@ -337,4 +371,48 @@ func TestController_CreateRental_ConflictingRental(t *testing.T) {
 		model.CreateRentalParams{CustomerId: exampleCustomerID})
 
 	assert.Equal(t, err, echo.NewHTTPError(http.StatusConflict, "conflicting rental exists"))
+}
+
+func TestController_GetOverview_success(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	ctx := context.Background()
+
+	request, _ := http.NewRequestWithContext(ctx, "GET", "", nil)
+
+	mockContext := mocks.NewMockContext(ctrl)
+	mockContext.EXPECT().Request().Return(request)
+	mockContext.EXPECT().JSON(http.StatusOK, customerRentalsShort)
+
+	mockOperations := mocks.NewMockIOperations(ctrl)
+	mockOperations.EXPECT().GetOverview(ctx, exampleCustomerID).Return(&customerRentalsShort, nil)
+
+	mockTime := mocks.NewMockITimeProvider(ctrl)
+
+	controller := NewController(mockOperations, mockTime)
+	err := controller.GetOverview(mockContext, model.GetOverviewParams{CustomerId: exampleCustomerID})
+	assert.Nil(t, err)
+}
+
+func TestController_GetOverview_operationsError(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	ctx := context.Background()
+
+	request, _ := http.NewRequestWithContext(ctx, "GET", "", nil)
+
+	mockContext := mocks.NewMockContext(ctrl)
+	mockContext.EXPECT().Request().Return(request)
+
+	mockOperations := mocks.NewMockIOperations(ctrl)
+	operationsError := errors.New("operations error")
+	mockOperations.EXPECT().GetOverview(ctx, exampleCustomerID).Return(nil, operationsError)
+
+	mockTime := mocks.NewMockITimeProvider(ctrl)
+
+	controller := NewController(mockOperations, mockTime)
+	err := controller.GetOverview(mockContext, model.GetOverviewParams{CustomerId: exampleCustomerID})
+	assert.ErrorIs(t, err, operationsError)
 }

@@ -12,6 +12,18 @@ func (r *Rental) ToRentalCustomer() Rental {
 	}
 }
 
+// ToRentalCustomerShort selects Active, Car, Id and RentalPeriod. Customer and Token are omitted.
+func (r *Rental) ToRentalCustomerShort() Rental {
+	return Rental{
+		Active:       r.Active,
+		Car:          r.Car,
+		Id:           r.Id,
+		Customer:     nil,
+		RentalPeriod: r.RentalPeriod,
+		Token:        nil,
+	}
+}
+
 // ToRentalFleetManager selects Active, Id, Customer and RentalPeriod. Car and Token are omitted.
 func (r *Rental) ToRentalFleetManager() Rental {
 	return Rental{

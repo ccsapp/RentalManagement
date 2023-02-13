@@ -3,14 +3,19 @@ package main
 import (
 	"RentalManagement/infrastructure/database"
 	"RentalManagement/infrastructure/database/db"
+	"RentalManagement/logic/model"
 	"RentalManagement/testdata"
 	"RentalManagement/testhelpers"
 	"context"
+	"encoding/json"
 	"fmt"
 	"github.com/labstack/echo/v4"
 	"github.com/steinfletcher/apitest"
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/suite"
+	"io"
 	"net/http"
+	"sort"
 	"testing"
 	"time"
 )
@@ -106,15 +111,19 @@ func (suite *ApiTestSuite) newCarMock() []*apitest.Mock {
 	}
 }
 
-func createRental(suite *ApiTestSuite, vin string, body string) {
+func createRentalForCustomer(suite *ApiTestSuite, vin string, body string, customerId string) {
 	suite.newApiTestWithCarMock().
 		Post("/cars/"+vin+"/rentals").
-		Query("customerId", "d9ChwOvI").
+		Query("customerId", customerId).
 		JSON(body).
 		Expect(suite.T()).
 		Status(http.StatusCreated).
 		Body("").
 		End()
+}
+
+func createRental(suite *ApiTestSuite, vin string, body string) {
+	createRentalForCustomer(suite, vin, body, "d9ChwOvI")
 }
 
 func (suite *ApiTestSuite) TestCreateRental_success_noRentals() {
@@ -384,6 +393,123 @@ func (suite *ApiTestSuite) TestGetCar_unknownCar() {
 func (suite *ApiTestSuite) TestGetCar_invalidVin() {
 	suite.newApiTestWithCarMock().
 		Get("/cars/invalid").
+		Expect(suite.T()).
+		Status(http.StatusBadRequest).
+		End()
+}
+
+func (suite *ApiTestSuite) TestGetRentalOverview_success_noRentals() {
+	suite.newApiTestWithCarMock().
+		Get("/rentals").
+		Query("customerId", "d9ChwOvI").
+		Expect(suite.T()).
+		Status(http.StatusOK).
+		Body(testdata.EmptyArray).
+		End()
+}
+
+func (suite *ApiTestSuite) TestGetRentalOverview_success_oneRental() {
+	createRentalForCustomer(suite, testdata.VinCar, testdata.TimePeriod2122, "d9ChwOvI")
+	createRentalForCustomer(suite, testdata.VinCar, testdata.TimePeriod2150, "aDfd3Dae")
+	suite.newApiTestWithCarMock().
+		Get("/rentals").
+		Query("customerId", "d9ChwOvI").
+		Expect(suite.T()).
+		Status(http.StatusOK).
+		Assert(returnsRentalArray([]model.Rental{
+			{
+				Active: false,
+				Car: &model.Car{
+					Brand: "Audi",
+					Model: "A3",
+					Vin:   "WVWAA71K08W201030",
+				},
+				RentalPeriod: model.TimePeriod{
+					EndDate:   time.Date(2123, 01, 01, 0, 0, 0, 0, time.UTC),
+					StartDate: time.Date(2122, 01, 01, 0, 0, 0, 0, time.UTC),
+				},
+			}}, suite.T())).
+		End()
+}
+
+func (suite *ApiTestSuite) TestGetRentalOverview_success_twoRentals() {
+	createRentalForCustomer(suite, testdata.VinCar, testdata.TimePeriod2122, "d9ChwOvI")
+	createRentalForCustomer(suite, testdata.VinCar, testdata.TimePeriod2150, "aDfd3Dae")
+	createRentalForCustomer(suite, testdata.VinCar2, testdata.TimePeriod2150, "d9ChwOvI")
+	suite.newApiTestWithCarMock().
+		Get("/rentals").
+		Query("customerId", "d9ChwOvI").
+		Expect(suite.T()).
+		Status(http.StatusOK).
+		Assert(returnsRentalArray([]model.Rental{
+			{
+				Active: false,
+				Car: &model.Car{
+					Brand: "Audi",
+					Model: "A3",
+					Vin:   "WVWAA71K08W201030",
+				},
+				RentalPeriod: model.TimePeriod{
+					EndDate:   time.Date(2123, 01, 01, 0, 0, 0, 0, time.UTC),
+					StartDate: time.Date(2122, 01, 01, 0, 0, 0, 0, time.UTC),
+				},
+			},
+			{
+				Active: false,
+				Car: &model.Car{
+					Brand: "Mercedes",
+					Model: "B4",
+					Vin:   "1FVNY5Y90HP312888",
+				},
+				RentalPeriod: model.TimePeriod{
+					EndDate:   time.Date(2151, 01, 01, 0, 0, 0, 0, time.UTC),
+					StartDate: time.Date(2150, 01, 01, 0, 0, 0, 0, time.UTC),
+				},
+			}}, suite.T())).
+		End()
+}
+
+func returnsRentalArray(expectedRentals []model.Rental, t *testing.T) func(res *http.Response, _ *http.Request) error {
+	return func(res *http.Response, _ *http.Request) error {
+		defer func() { _ = res.Body.Close() }()
+
+		bodyBytes, err := io.ReadAll(res.Body)
+		if err != nil {
+			return err
+		}
+
+		var rentals []model.Rental
+		if err := json.Unmarshal(bodyBytes, &rentals); err != nil {
+			return err
+		}
+
+		// sort by Vin, descending
+		sort.Slice(rentals, func(i, j int) bool {
+			return rentals[i].Car.Vin > rentals[j].Car.Vin
+		})
+
+		for i := range rentals {
+			rentals[i].Id = ""
+		}
+
+		assert.Equal(t, expectedRentals, rentals)
+
+		return nil
+	}
+}
+
+func (suite *ApiTestSuite) TestGetRentalOverview_invalidCustomerId() {
+	suite.newApiTestWithCarMock().
+		Get("/rentals").
+		Query("customerId", "waytoolongcustomerid").
+		Expect(suite.T()).
+		Status(http.StatusBadRequest).
+		End()
+}
+
+func (suite *ApiTestSuite) TestGetRentalOverview_missingCustomerId() {
+	suite.newApiTestWithCarMock().
+		Get("/rentals").
 		Expect(suite.T()).
 		Status(http.StatusBadRequest).
 		End()

@@ -93,9 +93,12 @@ func (c controller) SetLockState(echo.Context, model.VinParam, model.SetLockStat
 	panic("implement me")
 }
 
-func (c controller) GetOverview(echo.Context, model.GetOverviewParams) error {
-	// TODO implement me
-	panic("implement me")
+func (c controller) GetOverview(ctx echo.Context, params model.GetOverviewParams) error {
+	rentals, err := c.operations.GetOverview(ctx.Request().Context(), params.CustomerId)
+	if err != nil {
+		return err
+	}
+	return ctx.JSON(http.StatusOK, *rentals)
 }
 
 func (c controller) GetRentalStatus(echo.Context, model.RentalIdParam) error {
