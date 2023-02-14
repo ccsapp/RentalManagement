@@ -52,7 +52,7 @@ base-chart:
         - $INGRESS_HOSTNAME #override with default via pipeline
 
   mongodb:
-    enabled: false
+    enabled: true
     resources:
       limits:
         cpu: 900m
