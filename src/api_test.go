@@ -13,9 +13,9 @@ import (
 	"github.com/steinfletcher/apitest"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/suite"
-	"io"
 	"net/http"
 	"sort"
+	"strings"
 	"testing"
 	"time"
 )
@@ -111,7 +111,7 @@ func (suite *ApiTestSuite) newCarMock() []*apitest.Mock {
 	}
 }
 
-func createRentalForCustomer(suite *ApiTestSuite, vin string, body string, customerId string) {
+func (suite *ApiTestSuite) createRentalForCustomer(vin string, body string, customerId string) {
 	suite.newApiTestWithCarMock().
 		Post("/cars/"+vin+"/rentals").
 		Query("customerId", customerId).
@@ -122,28 +122,47 @@ func createRentalForCustomer(suite *ApiTestSuite, vin string, body string, custo
 		End()
 }
 
-func createRental(suite *ApiTestSuite, vin string, body string) {
-	createRentalForCustomer(suite, vin, body, "d9ChwOvI")
+func (suite *ApiTestSuite) createRental(vin string, body string) {
+	suite.createRentalForCustomer(vin, body, "d9ChwOvI")
+}
+
+func (suite *ApiTestSuite) getRentalOverview(customerId model.CustomerId) []model.Rental {
+	var rentals []model.Rental
+	suite.newApiTestWithCarMock().
+		Get("/rentals").
+		Query("customerId", customerId).
+		Expect(suite.T()).
+		Status(http.StatusOK).
+		Assert(mapOverviewToRentals(&rentals)).
+		End()
+	return rentals
+}
+
+func mapOverviewToRentals(rentals *[]model.Rental) func(*http.Response, *http.Request) error {
+	return func(res *http.Response, _ *http.Request) error {
+		defer func() { _ = res.Body.Close() }()
+		return json.NewDecoder(res.Body).Decode(rentals)
+	}
 }
 
 func (suite *ApiTestSuite) TestCreateRental_success_noRentals() {
-	createRental(suite, testdata.VinCar, testdata.TimePeriod2122)
+	suite.createRental(testdata.VinCar, testdata.TimePeriod2122)
 }
 
 func (suite *ApiTestSuite) TestCreateRental_success_nonConflictingRentalsExist() {
-	createRental(suite, testdata.VinCar, testdata.TimePeriod2122)
-	createRental(suite, testdata.VinCar2, testdata.TimePeriod2122)
-	createRental(suite, testdata.VinCar2, testdata.TimePeriod2150)
-	createRental(suite, testdata.VinCar, testdata.TimePeriod2150)
+	suite.createRental(testdata.VinCar, testdata.TimePeriod2122)
+	suite.createRental(testdata.VinCar2, testdata.TimePeriod2122)
+	suite.createRental(testdata.VinCar2, testdata.TimePeriod2150)
+	suite.createRental(testdata.VinCar, testdata.TimePeriod2150)
 }
 
 func (suite *ApiTestSuite) TestCreateRental_success_closeTimePeriod() {
-	createRental(suite, testdata.VinCar, testdata.TimePeriod2122)
-	createRental(suite, testdata.VinCar, testdata.TimePeriod2123)
+	suite.createRental(testdata.VinCar, testdata.TimePeriod2122)
+	suite.createRental(testdata.VinCar, testdata.TimePeriod2123)
 }
 
 func (suite *ApiTestSuite) TestCreateRental_conflictingRentalsExist() {
-	createRental(suite, testdata.VinCar, testdata.TimePeriod2122)
+	suite.createRental(testdata.VinCar, testdata.TimePeriod2122)
 
 	suite.newApiTestWithCarMock().
 		Post("/cars/"+testdata.VinCar+"/rentals").
@@ -155,7 +174,7 @@ func (suite *ApiTestSuite) TestCreateRental_conflictingRentalsExist() {
 }
 
 func (suite *ApiTestSuite) TestCreateRental_conflictingRentalsExist_overlappingPast() {
-	createRental(suite, testdata.VinCar, testdata.TimePeriod2122)
+	suite.createRental(testdata.VinCar, testdata.TimePeriod2122)
 
 	suite.newApiTestWithCarMock().
 		Post("/cars/"+testdata.VinCar+"/rentals").
@@ -167,7 +186,7 @@ func (suite *ApiTestSuite) TestCreateRental_conflictingRentalsExist_overlappingP
 }
 
 func (suite *ApiTestSuite) TestCreateRental_conflictingRentalsExist_overlappingFuture() {
-	createRental(suite, testdata.VinCar, testdata.TimePeriod2123)
+	suite.createRental(testdata.VinCar, testdata.TimePeriod2123)
 
 	suite.newApiTestWithCarMock().
 		Post("/cars/"+testdata.VinCar+"/rentals").
@@ -260,10 +279,10 @@ func (suite *ApiTestSuite) TestGetAvailableCars_success_noRentals() {
 }
 
 func (suite *ApiTestSuite) TestGetAvailableCars_success_bothAvailable() {
-	createRental(suite, testdata.VinCar, testdata.TimePeriod2122)
-	createRental(suite, testdata.VinCar2, testdata.TimePeriod2122)
-	createRental(suite, testdata.VinCar, testdata.TimePeriod2150)
-	createRental(suite, testdata.VinCar2, testdata.TimePeriod2150)
+	suite.createRental(testdata.VinCar, testdata.TimePeriod2122)
+	suite.createRental(testdata.VinCar2, testdata.TimePeriod2122)
+	suite.createRental(testdata.VinCar, testdata.TimePeriod2150)
+	suite.createRental(testdata.VinCar2, testdata.TimePeriod2150)
 	suite.newApiTestWithCarMock().
 		Get("/cars").
 		Query("startDate", "2123-01-01T00:00:00Z").
@@ -275,9 +294,9 @@ func (suite *ApiTestSuite) TestGetAvailableCars_success_bothAvailable() {
 }
 
 func (suite *ApiTestSuite) TestGetAvailableCars_success_secondBlockedInPast() {
-	createRental(suite, testdata.VinCar2, testdata.TimePeriod2122)
-	createRental(suite, testdata.VinCar, testdata.TimePeriod2150)
-	createRental(suite, testdata.VinCar2, testdata.TimePeriod2150)
+	suite.createRental(testdata.VinCar2, testdata.TimePeriod2122)
+	suite.createRental(testdata.VinCar, testdata.TimePeriod2150)
+	suite.createRental(testdata.VinCar2, testdata.TimePeriod2150)
 	suite.newApiTestWithCarMock().
 		Get("/cars").
 		Query("startDate", "2122-12-31T00:00:00Z").
@@ -289,9 +308,9 @@ func (suite *ApiTestSuite) TestGetAvailableCars_success_secondBlockedInPast() {
 }
 
 func (suite *ApiTestSuite) TestGetAvailableCars_success_secondBlockedInFuture() {
-	createRental(suite, testdata.VinCar, testdata.TimePeriod2122)
-	createRental(suite, testdata.VinCar2, testdata.TimePeriod2122)
-	createRental(suite, testdata.VinCar2, testdata.TimePeriod2150)
+	suite.createRental(testdata.VinCar, testdata.TimePeriod2122)
+	suite.createRental(testdata.VinCar2, testdata.TimePeriod2122)
+	suite.createRental(testdata.VinCar2, testdata.TimePeriod2150)
 	suite.newApiTestWithCarMock().
 		Get("/cars").
 		Query("startDate", "2123-01-01T00:00:00Z").
@@ -303,10 +322,10 @@ func (suite *ApiTestSuite) TestGetAvailableCars_success_secondBlockedInFuture() 
 }
 
 func (suite *ApiTestSuite) TestGetAvailableCars_success_bothBlocked() {
-	createRental(suite, testdata.VinCar, testdata.TimePeriod2122)
-	createRental(suite, testdata.VinCar2, testdata.TimePeriod2122)
-	createRental(suite, testdata.VinCar, testdata.TimePeriod2150)
-	createRental(suite, testdata.VinCar2, testdata.TimePeriod2150)
+	suite.createRental(testdata.VinCar, testdata.TimePeriod2122)
+	suite.createRental(testdata.VinCar2, testdata.TimePeriod2122)
+	suite.createRental(testdata.VinCar, testdata.TimePeriod2150)
+	suite.createRental(testdata.VinCar2, testdata.TimePeriod2150)
 	suite.newApiTestWithCarMock().
 		Get("/cars").
 		Query("startDate", "2122-01-01T00:00:00Z").
@@ -409,8 +428,8 @@ func (suite *ApiTestSuite) TestGetRentalOverview_success_noRentals() {
 }
 
 func (suite *ApiTestSuite) TestGetRentalOverview_success_oneRental() {
-	createRentalForCustomer(suite, testdata.VinCar, testdata.TimePeriod2122, "d9ChwOvI")
-	createRentalForCustomer(suite, testdata.VinCar, testdata.TimePeriod2150, "aDfd3Dae")
+	suite.createRentalForCustomer(testdata.VinCar, testdata.TimePeriod2122, "d9ChwOvI")
+	suite.createRentalForCustomer(testdata.VinCar, testdata.TimePeriod2150, "aDfd3Dae")
 	suite.newApiTestWithCarMock().
 		Get("/rentals").
 		Query("customerId", "d9ChwOvI").
@@ -433,9 +452,9 @@ func (suite *ApiTestSuite) TestGetRentalOverview_success_oneRental() {
 }
 
 func (suite *ApiTestSuite) TestGetRentalOverview_success_twoRentals() {
-	createRentalForCustomer(suite, testdata.VinCar, testdata.TimePeriod2122, "d9ChwOvI")
-	createRentalForCustomer(suite, testdata.VinCar, testdata.TimePeriod2150, "aDfd3Dae")
-	createRentalForCustomer(suite, testdata.VinCar2, testdata.TimePeriod2150, "d9ChwOvI")
+	suite.createRentalForCustomer(testdata.VinCar, testdata.TimePeriod2122, "d9ChwOvI")
+	suite.createRentalForCustomer(testdata.VinCar, testdata.TimePeriod2150, "aDfd3Dae")
+	suite.createRentalForCustomer(testdata.VinCar2, testdata.TimePeriod2150, "d9ChwOvI")
 	suite.newApiTestWithCarMock().
 		Get("/rentals").
 		Query("customerId", "d9ChwOvI").
@@ -473,13 +492,8 @@ func returnsRentalArray(expectedRentals []model.Rental, t *testing.T) func(res *
 	return func(res *http.Response, _ *http.Request) error {
 		defer func() { _ = res.Body.Close() }()
 
-		bodyBytes, err := io.ReadAll(res.Body)
-		if err != nil {
-			return err
-		}
-
 		var rentals []model.Rental
-		if err := json.Unmarshal(bodyBytes, &rentals); err != nil {
+		if err := json.NewDecoder(res.Body).Decode(&rentals); err != nil {
 			return err
 		}
 
@@ -510,6 +524,64 @@ func (suite *ApiTestSuite) TestGetRentalOverview_invalidCustomerId() {
 func (suite *ApiTestSuite) TestGetRentalOverview_missingCustomerId() {
 	suite.newApiTestWithCarMock().
 		Get("/rentals").
+		Expect(suite.T()).
+		Status(http.StatusBadRequest).
+		End()
+}
+
+func (suite *ApiTestSuite) TestGetRentalStatus_success_inactiveRental() {
+	suite.createRentalForCustomer(testdata.VinCar, testdata.TimePeriod2122, "d9ChwOvI")
+
+	rentalId := suite.getRentalOverview("d9ChwOvI")[0].Id
+
+	suite.newApiTestWithCarMock().
+		Get("/rentals/" + rentalId).
+		Expect(suite.T()).
+		Status(http.StatusOK).
+		Body(strings.Replace(
+			testdata.CustomerRentalInactive, "WillBeReplacedDynamicallyDuringTesting_RentalID", rentalId, 1)).
+		End()
+}
+
+func (suite *ApiTestSuite) TestGetRentalStatus_success_activeRental() {
+	periodFromNow := model.TimePeriod{
+		StartDate: time.Now().Add(10 * time.Millisecond).UTC().Round(time.Millisecond),
+		EndDate:   time.Date(2123, 1, 1, 0, 0, 0, 0, time.UTC),
+	}
+
+	marshalledPeriodFromNow, _ := json.Marshal(periodFromNow)
+
+	suite.createRentalForCustomer(testdata.VinCar, string(marshalledPeriodFromNow), "d9ChwOvI")
+
+	time.Sleep(10 * time.Millisecond)
+
+	rentalId := suite.getRentalOverview("d9ChwOvI")[0].Id
+
+	expectedRental := strings.Replace(
+		testdata.CustomerRentalActive, "\"WillBeReplacedDynamicallyDuringTesting_RentalPeriod\"",
+		string(marshalledPeriodFromNow), 1)
+	expectedRental = strings.Replace(
+		expectedRental, "WillBeReplacedDynamicallyDuringTesting_RentalID", rentalId, 1)
+
+	suite.newApiTestWithCarMock().
+		Get("/rentals/" + rentalId).
+		Expect(suite.T()).
+		Status(http.StatusOK).
+		Body(expectedRental).
+		End()
+}
+
+func (suite *ApiTestSuite) TestGetRentalStatus_unknownRentalId() {
+	suite.newApiTestWithCarMock().
+		Get("/rentals/unkownid").
+		Expect(suite.T()).
+		Status(http.StatusNotFound).
+		End()
+}
+
+func (suite *ApiTestSuite) TestGetRentalStatus_invalidRentalId() {
+	suite.newApiTestWithCarMock().
+		Get("/rentals/waytoolongrentalid").
 		Expect(suite.T()).
 		Status(http.StatusBadRequest).
 		End()

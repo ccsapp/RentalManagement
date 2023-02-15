@@ -6,5 +6,6 @@ import "errors"
 var (
 	ErrDomainAssertion         = errors.New("unexpected response from domain service")
 	ErrCarNotFound             = errors.New("car not found")
+	ErrRentalNotFound          = errors.New("rental not found")
 	ErrConflictingRentalExists = errors.New("conflicting rental exists")
 )
