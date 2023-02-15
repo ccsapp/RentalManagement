@@ -21,6 +21,7 @@ type ICRUD interface {
 	GetUnavailableCars(ctx context.Context, timePeriod model.TimePeriod) (*[]model.Vin, error)
 	CreateRental(ctx context.Context, vin model.Vin, customerId model.CustomerId, timePeriod model.TimePeriod) error
 	GetRentalsOfCustomer(ctx context.Context, customerID model.CustomerId) (*[]model.Rental, error)
+	GetRental(ctx context.Context, rentalId model.RentalId) (*model.Rental, error)
 }
 
 type crud struct {
@@ -127,4 +128,28 @@ func (c *crud) GetRentalsOfCustomer(ctx context.Context, customerID model.Custom
 	rentals := mappers.MapCarsFromDbToRentals(&cars, c.timeProvider)
 
 	return &rentals, nil
+}
+
+func (c *crud) GetRental(ctx context.Context, rentalId model.RentalId) (*model.Rental, error) {
+	var cars []entities.Car
+
+	factory := c.db.GetFactory()
+
+	err := c.db.Aggregate(
+		ctx, c.collection, factory.ArrayFilterAggregation(
+			"rentals",
+			factory.FilterEqual("rentals.rentalId", rentalId),
+			1,
+			nil,
+		), &cars,
+	)
+	if err != nil {
+		return nil, err
+	}
+	if len(cars) == 0 {
+		return nil, rentalErrors.ErrRentalNotFound
+	}
+
+	rentals := mappers.MapCarFromDbToRentals(&cars[0], c.timeProvider)
+	return &rentals[0], nil
 }

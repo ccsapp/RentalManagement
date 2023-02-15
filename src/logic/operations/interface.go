@@ -15,4 +15,6 @@ type IOperations interface {
 	GetCar(ctx context.Context, vin model.Vin) (*model.Car, error)
 	// GetOverview Get an Overview of a Customer’s Rentals
 	GetOverview(ctx context.Context, customerID model.CustomerId) (*[]model.Rental, error)
+	// GetRentalStatus Get Rental Status Information (Including Car Data) based on an ID
+	GetRentalStatus(ctx context.Context, rentalId model.RentalId) (*model.Rental, error)
 }

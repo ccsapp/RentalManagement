@@ -416,3 +416,69 @@ func TestController_GetOverview_operationsError(t *testing.T) {
 	err := controller.GetOverview(mockContext, model.GetOverviewParams{CustomerId: exampleCustomerID})
 	assert.ErrorIs(t, err, operationsError)
 }
+
+func TestController_GetRentalStatus_success(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	ctx := context.Background()
+
+	request, _ := http.NewRequestWithContext(ctx, "GET", "", nil)
+
+	mockContext := mocks.NewMockContext(ctrl)
+	mockContext.EXPECT().Request().Return(request)
+	mockContext.EXPECT().JSON(http.StatusOK, rentalCustomerShort1)
+
+	mockOperations := mocks.NewMockIOperations(ctrl)
+	mockOperations.EXPECT().GetRentalStatus(ctx, rentalCustomerShort1.Id).Return(&rentalCustomerShort1, nil)
+
+	mockTime := mocks.NewMockITimeProvider(ctrl)
+
+	controller := NewController(mockOperations, mockTime)
+	err := controller.GetRentalStatus(mockContext, rentalCustomerShort1.Id)
+	assert.Nil(t, err)
+}
+
+func TestController_GetRentalStatus_RentalNotFound(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	ctx := context.Background()
+
+	request, _ := http.NewRequestWithContext(ctx, "GET", "", nil)
+
+	mockContext := mocks.NewMockContext(ctrl)
+	mockContext.EXPECT().Request().Return(request)
+
+	mockOperations := mocks.NewMockIOperations(ctrl)
+	mockOperations.EXPECT().GetRentalStatus(ctx, rentalCustomerShort1.Id).Return(nil, rentalErrors.ErrRentalNotFound)
+
+	mockTime := mocks.NewMockITimeProvider(ctrl)
+
+	controller := NewController(mockOperations, mockTime)
+	err := controller.GetRentalStatus(mockContext, rentalCustomerShort1.Id)
+
+	assert.Equal(t, err, echo.NewHTTPError(http.StatusNotFound, "rentalId not found"))
+}
+
+func TestController_GetRentalStatus_operationsError(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	ctx := context.Background()
+
+	request, _ := http.NewRequestWithContext(ctx, "GET", "", nil)
+
+	mockContext := mocks.NewMockContext(ctrl)
+	mockContext.EXPECT().Request().Return(request)
+
+	mockOperations := mocks.NewMockIOperations(ctrl)
+	operationsError := errors.New("operations error")
+	mockOperations.EXPECT().GetRentalStatus(ctx, rentalCustomerShort1.Id).Return(nil, operationsError)
+
+	mockTime := mocks.NewMockITimeProvider(ctrl)
+
+	controller := NewController(mockOperations, mockTime)
+	err := controller.GetRentalStatus(mockContext, rentalCustomerShort1.Id)
+	assert.ErrorIs(t, err, operationsError)
+}

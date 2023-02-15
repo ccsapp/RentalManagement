@@ -427,3 +427,131 @@ func TestCrud_GetRentalsOfCustomer_databaseError(t *testing.T) {
 	assert.ErrorIs(t, err, dbError)
 	assert.Nil(t, returnedRentals)
 }
+
+func TestCrud_GetRental_success(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	ctx := context.Background()
+
+	mockConnection := mocks.NewMockIConnection(ctrl)
+
+	factory := db.PseudoFactory{}
+
+	rentalId := "rZ6IIwcD"
+
+	var car = entities.Car{
+		Vin: "WVWAA71K08W201030",
+		Rentals: []entities.Rental{
+			{
+				RentalId:   rentalId,
+				CustomerId: "jJ8mNg6Z",
+				RentalPeriod: entities.TimePeriod{
+					EndDate:   time.Date(2023, 4, 3, 1, 0, 0, 0, time.UTC),
+					StartDate: time.Date(2023, 3, 2, 3, 0, 0, 0, time.UTC),
+				},
+				TrunkToken: &entities.TrunkAccessToken{
+					Token: "bumrLuCMbumrLuCMbumrLuCM",
+					ValidityPeriod: entities.TimePeriod{
+						EndDate:   time.Date(2023, 2, 3, 1, 0, 0, 0, time.UTC),
+						StartDate: time.Date(2023, 2, 2, 3, 0, 0, 0, time.UTC),
+					},
+				},
+			},
+		},
+	}
+
+	var rental = model.Rental{
+		Active:   true,
+		Car:      &model.Car{Vin: "WVWAA71K08W201030"},
+		Id:       rentalId,
+		Customer: &model.Customer{CustomerId: "jJ8mNg6Z"},
+		RentalPeriod: model.TimePeriod{
+			EndDate:   time.Date(2023, 4, 3, 1, 0, 0, 0, time.UTC),
+			StartDate: time.Date(2023, 3, 2, 3, 0, 0, 0, time.UTC),
+		},
+		Token: &model.TrunkAccess{
+			Token: "bumrLuCMbumrLuCMbumrLuCM",
+			ValidityPeriod: model.TimePeriod{
+				EndDate:   time.Date(2023, 2, 3, 1, 0, 0, 0, time.UTC),
+				StartDate: time.Date(2023, 2, 2, 3, 0, 0, 0, time.UTC),
+			},
+		},
+	}
+
+	var cars = []entities.Car{car}
+	var currentDate = time.Date(2023, 4, 1, 0, 0, 0, 0, time.UTC)
+	mockTimeProvider := mocks.NewMockITimeProvider(ctrl)
+	mockTimeProvider.EXPECT().Now().Return(currentDate)
+
+	mockConnection.EXPECT().GetFactory().Return(&factory)
+	mockConnection.EXPECT().Aggregate(
+		ctx,
+		collectionPrefix+CollectionBaseName,
+		factory.ArrayFilterAggregation(
+			"rentals",
+			factory.FilterEqual("rentals.rentalId", rentalId),
+			1,
+			nil),
+		gomock.Any(),
+	).SetArg(3, cars).Return(nil)
+
+	crud := NewICRUD(mockConnection, dbConfig, mockTimeProvider)
+	returnedRental, err := crud.GetRental(ctx, rentalId)
+
+	assert.Nil(t, err)
+	assert.Equal(t, &rental, returnedRental)
+}
+
+func TestCrud_GetRental_rentalIdNotFoundError(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	ctx := context.Background()
+	factory := db.PseudoFactory{}
+	rentalId := "norental"
+
+	mockConnection := mocks.NewMockIConnection(ctrl)
+	mockTimeProvider := mocks.NewMockITimeProvider(ctrl)
+
+	mockConnection.EXPECT().GetFactory().Return(&factory)
+	mockConnection.EXPECT().Aggregate(
+		ctx,
+		collectionPrefix+CollectionBaseName,
+		gomock.Any(),
+		gomock.Any(),
+	).Return(nil)
+
+	crud := NewICRUD(mockConnection, dbConfig, mockTimeProvider)
+	returnedRental, err := crud.GetRental(ctx, rentalId)
+
+	assert.ErrorIs(t, err, rentalErrors.ErrRentalNotFound)
+	assert.Nil(t, returnedRental)
+}
+
+func TestCrud_GetRental_databaseError(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	ctx := context.Background()
+	factory := db.PseudoFactory{}
+	dbError := errors.New("db error")
+	rentalId := "rZ6IIwcD"
+
+	mockConnection := mocks.NewMockIConnection(ctrl)
+	mockTimeProvider := mocks.NewMockITimeProvider(ctrl)
+
+	mockConnection.EXPECT().GetFactory().Return(&factory)
+	mockConnection.EXPECT().Aggregate(
+		ctx,
+		collectionPrefix+CollectionBaseName,
+		gomock.Any(),
+		gomock.Any(),
+	).Return(dbError)
+
+	crud := NewICRUD(mockConnection, dbConfig, mockTimeProvider)
+	returnedRental, err := crud.GetRental(ctx, rentalId)
+
+	assert.ErrorIs(t, err, dbError)
+	assert.Nil(t, returnedRental)
+}

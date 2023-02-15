@@ -101,9 +101,15 @@ func (c controller) GetOverview(ctx echo.Context, params model.GetOverviewParams
 	return ctx.JSON(http.StatusOK, *rentals)
 }
 
-func (c controller) GetRentalStatus(echo.Context, model.RentalIdParam) error {
-	// TODO implement me
-	panic("implement me")
+func (c controller) GetRentalStatus(ctx echo.Context, rentalId model.RentalIdParam) error {
+	rental, err := c.operations.GetRentalStatus(ctx.Request().Context(), rentalId)
+	if errors.Is(err, rentalErrors.ErrRentalNotFound) {
+		return echo.NewHTTPError(http.StatusNotFound, "rentalId not found")
+	}
+	if err != nil {
+		return err
+	}
+	return ctx.JSON(http.StatusOK, *rental)
 }
 
 func (c controller) GrantTrunkAccess(echo.Context, model.RentalIdParam) error {

@@ -26,6 +26,12 @@ var CarsAvailableBoth string
 //go:embed customerRental.json
 var CustomerRental string
 
+//go:embed customerRentalInactive.json
+var CustomerRentalInactive string
+
+//go:embed customerRentalActive.json
+var CustomerRentalActive string
+
 //go:embed exampleCarVins.json
 var ExampleCarVins string
 

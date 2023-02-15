@@ -1,0 +1,37 @@
+{
+  "id": "WillBeReplacedDynamicallyDuringTesting_RentalID",
+  "active": false,
+  "rentalPeriod": {
+    "startDate": "2122-01-01T00:00:00Z",
+    "endDate": "2123-01-01T00:00:00Z"
+  },
+  "car": {
+    "vin": "WVWAA71K08W201030",
+    "brand": "Audi",
+    "model": "A3",
+    "technicalSpecification": {
+      "color": "black",
+      "weight": 1320,
+      "trunkVolume": 435,
+      "engine": {
+        "type": "180 CDI",
+        "power": 150
+      },
+      "transmission": "MANUAL",
+      "numberOfSeats": 7,
+      "numberOfDoors": 3,
+      "fuel": "ELECTRIC",
+      "fuelCapacity": "85.2kWh",
+      "consumption": {
+        "city": 6.4,
+        "overland": 4.6,
+        "combined": 5.2
+      },
+      "emissions": {
+        "city": 168,
+        "overland": 122,
+        "combined": 137
+      }
+    }
+  }
+}

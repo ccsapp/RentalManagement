@@ -1,0 +1,44 @@
+{
+  "id": "WillBeReplacedDynamicallyDuringTesting_RentalID",
+  "active": true,
+  "rentalPeriod": "WillBeReplacedDynamicallyDuringTesting_RentalPeriod",
+  "car": {
+    "vin": "WVWAA71K08W201030",
+    "brand": "Audi",
+    "model": "A3",
+    "technicalSpecification": {
+      "color": "black",
+      "weight": 1320,
+      "trunkVolume": 435,
+      "engine": {
+        "type": "180 CDI",
+        "power": 150
+      },
+      "transmission": "MANUAL",
+      "numberOfSeats": 7,
+      "numberOfDoors": 3,
+      "fuel": "ELECTRIC",
+      "fuelCapacity": "85.2kWh",
+      "consumption": {
+        "city": 6.4,
+        "overland": 4.6,
+        "combined": 5.2
+      },
+      "emissions": {
+        "city": 168,
+        "overland": 122,
+        "combined": 137
+      }
+    },
+    "dynamicData": {
+      "doorsLockState": "UNLOCKED",
+      "engineState": "OFF",
+      "fuelLevelPercentage": 23,
+      "position": {
+        "latitude": 49.0069,
+        "longitude": 8.4037
+      },
+      "trunkLockState": "UNLOCKED"
+    }
+  }
+}
