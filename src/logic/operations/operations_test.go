@@ -2,6 +2,7 @@ package operations
 
 import (
 	"RentalManagement/infrastructure/car"
+	"RentalManagement/infrastructure/database"
 	"RentalManagement/logic/model"
 	"RentalManagement/logic/rentalErrors"
 	"RentalManagement/mocks"
@@ -21,6 +22,11 @@ var exampleCustomerID = "34tfewss"
 var timePeriod = model.TimePeriod{
 	StartDate: time.Date(2023, 2, 1, 0, 0, 0, 0, time.UTC),
 	EndDate:   time.Date(2023, 3, 1, 0, 0, 0, 0, time.UTC),
+}
+
+var timePeriod2 = model.TimePeriod{
+	StartDate: time.Date(2025, 2, 1, 0, 0, 0, 0, time.UTC),
+	EndDate:   time.Date(2026, 3, 1, 0, 0, 0, 0, time.UTC),
 }
 
 const vin1 = "WVWAA71K08W201030"
@@ -679,4 +685,123 @@ func TestOperations_GetRentalStatus_UnknownDomainResponse(t *testing.T) {
 
 	assert.ErrorIs(t, err, rentalErrors.ErrDomainAssertion)
 	assert.Nil(t, rental)
+}
+
+func TestOperations_GrantTrunkAccess_success(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	ctx := context.Background()
+
+	mockCar := mocks.NewMockClientWithResponsesInterface(ctrl)
+
+	mockCrud := mocks.NewMockICRUD(ctrl)
+	mockCrud.EXPECT().SetTrunkToken(ctx, "rentalId", gomock.Any()).DoAndReturn(
+		func(_ context.Context, _ string, trunkAccess model.TrunkAccess) (*model.TrunkAccess, error) {
+			assert.Equal(t, timePeriod, trunkAccess.ValidityPeriod)
+			return &model.TrunkAccess{Token: trunkAccess.Token, ValidityPeriod: timePeriod2}, nil
+		},
+	)
+
+	operations := NewOperations(mockCar, mockCrud)
+	trunkAccess, err := operations.GrantTrunkAccess(ctx, "rentalId", timePeriod)
+
+	assert.Nil(t, err)
+	assert.Equal(t, 24, len(trunkAccess.Token))
+	assert.Equal(t, timePeriod2, trunkAccess.ValidityPeriod)
+}
+
+func TestOperations_GrantTrunkAccess_unknownRental(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	ctx := context.Background()
+
+	mockCar := mocks.NewMockClientWithResponsesInterface(ctrl)
+
+	mockCrud := mocks.NewMockICRUD(ctrl)
+	mockCrud.EXPECT().SetTrunkToken(ctx, "rentalId", gomock.Any()).Return(nil, rentalErrors.ErrRentalNotFound)
+
+	operations := NewOperations(mockCar, mockCrud)
+	trunkAccess, err := operations.GrantTrunkAccess(ctx, "rentalId", timePeriod)
+
+	assert.ErrorIs(t, err, rentalErrors.ErrRentalNotFound)
+	assert.Nil(t, trunkAccess)
+}
+
+func TestOperations_GrantTrunkAccess_unexpectedCrudError(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	ctx := context.Background()
+
+	mockCar := mocks.NewMockClientWithResponsesInterface(ctrl)
+
+	crudError := errors.New("crud error")
+
+	mockCrud := mocks.NewMockICRUD(ctrl)
+	mockCrud.EXPECT().SetTrunkToken(ctx, "rentalId", gomock.Any()).Return(nil, crudError)
+
+	operations := NewOperations(mockCar, mockCrud)
+	trunkAccess, err := operations.GrantTrunkAccess(ctx, "rentalId", timePeriod)
+
+	assert.ErrorIs(t, err, crudError)
+	assert.Nil(t, trunkAccess)
+}
+
+func TestOperations_GrantTrunkAccess_rentalNotActive(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	ctx := context.Background()
+
+	mockCar := mocks.NewMockClientWithResponsesInterface(ctrl)
+
+	mockCrud := mocks.NewMockICRUD(ctrl)
+	mockCrud.EXPECT().SetTrunkToken(ctx, "rentalId", gomock.Any()).
+		Return(nil, rentalErrors.ErrRentalNotActive)
+
+	operations := NewOperations(mockCar, mockCrud)
+	trunkAccess, err := operations.GrantTrunkAccess(ctx, "rentalId", timePeriod)
+
+	assert.ErrorIs(t, err, rentalErrors.ErrRentalNotActive)
+	assert.Nil(t, trunkAccess)
+}
+
+func TestOperations_GrantTrunkAccess_rentalNotOverlapping(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	ctx := context.Background()
+
+	mockCar := mocks.NewMockClientWithResponsesInterface(ctrl)
+
+	mockCrud := mocks.NewMockICRUD(ctrl)
+	mockCrud.EXPECT().SetTrunkToken(ctx, "rentalId", gomock.Any()).
+		Return(nil, rentalErrors.ErrRentalNotOverlapping)
+
+	operations := NewOperations(mockCar, mockCrud)
+	trunkAccess, err := operations.GrantTrunkAccess(ctx, "rentalId", timePeriod)
+
+	assert.ErrorIs(t, err, rentalErrors.ErrRentalNotOverlapping)
+	assert.Nil(t, trunkAccess)
+}
+
+func TestOperations_GrantTrunkAccess_resourceConflict(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	ctx := context.Background()
+
+	mockCar := mocks.NewMockClientWithResponsesInterface(ctrl)
+
+	mockCrud := mocks.NewMockICRUD(ctrl)
+	mockCrud.EXPECT().SetTrunkToken(ctx, "rentalId", gomock.Any()).
+		Return(nil, database.OptimisticLockingError)
+
+	operations := NewOperations(mockCar, mockCrud)
+	trunkAccess, err := operations.GrantTrunkAccess(ctx, "rentalId", timePeriod)
+
+	assert.ErrorIs(t, err, rentalErrors.ErrResourceConflict)
+	assert.Nil(t, trunkAccess)
 }

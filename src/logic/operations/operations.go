@@ -5,7 +5,9 @@ import (
 	"RentalManagement/infrastructure/database"
 	"RentalManagement/logic/model"
 	"RentalManagement/logic/rentalErrors"
+	"RentalManagement/util"
 	"context"
+	"errors"
 	"fmt"
 	"net/http"
 )
@@ -129,6 +131,25 @@ func (o *operations) GetOverview(ctx context.Context, customerID model.CustomerI
 	}
 
 	return rentals, nil
+}
+
+func (o *operations) GrantTrunkAccess(ctx context.Context, rentalId model.RentalId, timePeriod model.TimePeriod) (
+	*model.TrunkAccess, error) {
+
+	trunkAccess := model.TrunkAccess{
+		Token:          util.GenerateRandomString(24),
+		ValidityPeriod: timePeriod,
+	}
+
+	createdToken, err := o.crud.SetTrunkToken(ctx, rentalId, trunkAccess)
+	if errors.Is(err, database.OptimisticLockingError) {
+		return nil, rentalErrors.ErrResourceConflict
+	}
+	if err != nil {
+		return nil, err
+	}
+
+	return createdToken, nil
 }
 
 func (o *operations) GetRentalStatus(ctx context.Context, rentalId model.RentalId) (*model.Rental, error) {

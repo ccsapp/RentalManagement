@@ -67,6 +67,12 @@ type QueryFactory interface {
 	UpdateMultiple(document interface{}) Update
 	// UpdatePush creates an update request that adds value to an array field.
 	UpdatePush(fieldName string, value interface{}) Update
+
+	// UpdateMatchingArrayElement creates an update request that updates the first matching array element
+	// in the array field of a document that matches via FilterElementMatch.
+	// In concrete, the elementFieldName field of the array element is set to value.
+	// This method MUST NOT be used with upsert operations!
+	UpdateMatchingArrayElement(arrayName string, elementFieldName string, value interface{}) Update
 }
 
 type Filter interface {

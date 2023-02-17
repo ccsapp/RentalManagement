@@ -116,8 +116,6 @@ func loadConfig() (*Config, error) {
 }
 
 func main() {
-	util.InitRandom()
-
 	config, err := loadConfig()
 	if err != nil {
 		log.Fatal(err)

@@ -129,6 +129,12 @@ func (f *PseudoFactory) UnpackPushUpdate(updateParam Update) (string, interface{
 	return pseudoUpd.field[18:], pseudoUpd.value, nil
 }
 
+func (f *PseudoFactory) UpdateMatchingArrayElement(arrayName string, elementFieldName string,
+	value interface{}) Update {
+
+	return &update{pseudoUpdate{"#+#+/MATCHING/+#+# IN " + arrayName + ", SET " + elementFieldName, value}}
+}
+
 func (f *PseudoFactory) ArrayFilterAggregation(arrayName string, filter Filter, limit int, sort Sort) Pipeline {
 	return &pipeline{pseudoNestedFilter{arrayName, filter, limit, sort}}
 }

@@ -15,12 +15,28 @@ import (
 
 const CollectionBaseName = "rentals"
 
+var OptimisticLockingError = errors.New("optimistic locking failed")
+
 // ICRUD is a high level database interface. It directly maps to the business logic and abstracts away the
 // database entities and the database connection.
 type ICRUD interface {
 	GetUnavailableCars(ctx context.Context, timePeriod model.TimePeriod) (*[]model.Vin, error)
 	CreateRental(ctx context.Context, vin model.Vin, customerId model.CustomerId, timePeriod model.TimePeriod) error
 	GetRentalsOfCustomer(ctx context.Context, customerID model.CustomerId) (*[]model.Rental, error)
+
+	// SetTrunkToken sets the trunk token of a rental.
+	// Any old trunk token is overwritten.
+	// The validity period of the trunk token is restricted to the validity period of the rental.
+	// The resulting trunk token written to the database is returned (nil if any error occurred).
+	// If the rental does not exist, rentalErrors.ErrRentalNotFound is returned.
+	// If the rental is not active, rentalErrors.ErrRentalNotActive is returned.
+	// If the rental is not active at any time during the validity period,
+	// rentalErrors.ErrRentalNotOverlapping is returned.
+	// This method uses optimistic locking for race condition safety.
+	// If an optimistic locking error occurs, the method is retried up to 2 times.
+	// If the optimistic locking error persists, OptimisticLockingError is returned.
+	SetTrunkToken(ctx context.Context, rentalId model.RentalId,
+		trunkAccess model.TrunkAccess) (*model.TrunkAccess, error)
 	GetRental(ctx context.Context, rentalId model.RentalId) (*model.Rental, error)
 }
 
@@ -128,6 +144,104 @@ func (c *crud) GetRentalsOfCustomer(ctx context.Context, customerID model.Custom
 	rentals := mappers.MapCarsFromDbToRentals(&cars, c.timeProvider)
 
 	return &rentals, nil
+}
+
+func (c *crud) SetTrunkToken(ctx context.Context, rentalId model.RentalId,
+	trunkAccess model.TrunkAccess) (*model.TrunkAccess, error) {
+
+	var err error
+	var returnedAccess *model.TrunkAccess
+
+	// if an optimistic locking error occurs, try again (but only twice)
+	for i := 0; i < 3; i++ {
+		returnedAccess, err = c.trySetTrunkToken(ctx, rentalId, trunkAccess)
+
+		if !errors.Is(err, OptimisticLockingError) {
+			break
+		}
+	}
+
+	return returnedAccess, err
+}
+
+func (c *crud) trySetTrunkToken(ctx context.Context, rentalId model.RentalId,
+	trunkAccess model.TrunkAccess) (*model.TrunkAccess, error) {
+
+	factory := c.db.GetFactory()
+
+	var cars []entities.Car
+
+	// fetch the rental with the given rentalId
+	err := c.db.Aggregate(
+		ctx,
+		c.collection,
+		factory.ArrayFilterAggregation(
+			"rentals",
+			factory.FilterEqual("rentals.rentalId", rentalId),
+			1, // limit to 1
+			nil,
+		),
+		&cars,
+	)
+
+	if err != nil {
+		return nil, err
+	}
+
+	if len(cars) == 0 {
+		return nil, rentalErrors.ErrRentalNotFound
+	}
+
+	if len(cars) > 1 {
+		panic("more than one car returned for a single rentalId")
+	}
+
+	if len(cars[0].Rentals) != 1 {
+		panic("returned car has wrong number of rentals")
+	}
+
+	rentalEntity := cars[0].Rentals[0]
+	rentalModel := mappers.MapCarFromDbToRentals(&cars[0], c.timeProvider)[0]
+
+	if !rentalModel.Active {
+		return nil, rentalErrors.ErrRentalNotActive
+	}
+
+	restrictedValidityPeriod := trunkAccess.ValidityPeriod.RestrictTo(&rentalModel.RentalPeriod)
+	if restrictedValidityPeriod == nil {
+		return nil, rentalErrors.ErrRentalNotOverlapping
+	}
+
+	trunkAccess.ValidityPeriod = *restrictedValidityPeriod
+
+	trunkTokenEntity := mappers.MapTokenToDb(&trunkAccess)
+
+	// Optimistic Locking: If the rental changed in the meantime, the update will not do anything
+	// (i.e. return NoDocumentsError)
+	err = c.db.UpdateOne(
+		ctx,
+		c.collection,
+		factory.FilterElementMatch(
+			"rentals",
+			factory.FilterMatch(rentalEntity),
+		),
+		factory.UpdateMatchingArrayElement(
+			"rentals",
+			"trunkToken",
+			*trunkTokenEntity,
+		),
+		false, // no upsert
+	)
+
+	if errors.Is(err, db.NoDocumentsError) {
+		return nil, OptimisticLockingError
+	}
+
+	if err != nil {
+		return nil, err
+	}
+
+	return &trunkAccess, nil
 }
 
 func (c *crud) GetRental(ctx context.Context, rentalId model.RentalId) (*model.Rental, error) {
