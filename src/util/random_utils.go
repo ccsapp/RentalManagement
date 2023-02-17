@@ -1,21 +1,21 @@
 package util
 
 import (
-	"math/rand"
-	"time"
+	"crypto/rand"
+	"math/big"
 )
-
-func InitRandom() {
-	rand.Seed(time.Now().UnixNano())
-}
 
 var alphanumericRunes = []rune("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789")
 
-// GenerateRandomString generates a random alphanumeric string of the given length.
+// GenerateRandomString generates a cryptographically secure random alphanumeric string of the given length.
 func GenerateRandomString(length int) string {
 	b := make([]rune, length)
 	for i := range b {
-		b[i] = alphanumericRunes[rand.Intn(len(alphanumericRunes))]
+		randInt, err := rand.Int(rand.Reader, big.NewInt(int64(len(alphanumericRunes))))
+		if err != nil {
+			panic(err)
+		}
+		b[i] = alphanumericRunes[randInt.Int64()]
 	}
 	return string(b)
 }

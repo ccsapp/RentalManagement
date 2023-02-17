@@ -82,6 +82,10 @@ func (f *MongoFactory) UpdatePush(fieldName string, value interface{}) Update {
 	return &update{bson.D{{"$push", bson.D{{fieldName, value}}}}}
 }
 
+func (f *MongoFactory) UpdateMatchingArrayElement(arrayName string, elementFieldName string, value interface{}) Update {
+	return &update{bson.D{{"$set", bson.D{{arrayName + ".$." + elementFieldName, value}}}}}
+}
+
 func (f *MongoFactory) ArrayFilterAggregation(arrayName string, filter Filter, limit int, sort Sort) Pipeline {
 	// Create an output document ("unwound document") for each array element of an input document.
 	// Each output document is the input document with the value of the array field replaced by the element.

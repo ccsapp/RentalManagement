@@ -3,6 +3,7 @@ package database
 import (
 	"RentalManagement/infrastructure/database/db"
 	"RentalManagement/infrastructure/database/entities"
+	"RentalManagement/infrastructure/database/mappers"
 	"RentalManagement/logic/model"
 	"RentalManagement/logic/rentalErrors"
 	"RentalManagement/mocks"
@@ -426,6 +427,982 @@ func TestCrud_GetRentalsOfCustomer_databaseError(t *testing.T) {
 
 	assert.ErrorIs(t, err, dbError)
 	assert.Nil(t, returnedRentals)
+}
+
+func TestCrud_SetTrunkToken_success_noRestriction_existingToken(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	ctx := context.Background()
+	factory := db.PseudoFactory{}
+
+	mockConnection := mocks.NewMockIConnection(ctrl)
+
+	mockTimeProvider := mocks.NewMockITimeProvider(ctrl)
+	mockTimeProvider.EXPECT().Now().Return(
+		time.Date(2023, 6, 1, 1, 0, 0, 0, time.UTC),
+	)
+
+	existingRental := entities.Rental{
+		RentalId:   "rentalId",
+		CustomerId: "customer",
+		RentalPeriod: entities.TimePeriod{
+			StartDate: time.Date(2023, 1, 1, 0, 0, 0, 0, time.UTC),
+			EndDate:   time.Date(2024, 1, 1, 0, 0, 0, 0, time.UTC),
+		},
+		TrunkToken: &entities.TrunkAccessToken{
+			Token: "bumrLuCMbumrLuCMbumrLuCM",
+			ValidityPeriod: entities.TimePeriod{
+				StartDate: time.Date(2023, 1, 1, 0, 0, 0, 0, time.UTC),
+				EndDate:   time.Date(2024, 1, 1, 0, 0, 0, 0, time.UTC),
+			},
+		},
+	}
+
+	mockConnection.EXPECT().GetFactory().Return(&factory)
+	mockConnection.EXPECT().Aggregate(
+		ctx,
+		collectionPrefix+CollectionBaseName,
+		factory.ArrayFilterAggregation(
+			"rentals",
+			factory.FilterEqual("rentals.rentalId", "rentalId"),
+			1, // limit to 1
+			nil,
+		),
+		gomock.Any(),
+	).SetArg(3, []entities.Car{
+		{
+			Vin:     "AVWAA71K08W201031",
+			Rentals: []entities.Rental{existingRental},
+		},
+	}).Return(nil)
+
+	newToken := model.TrunkAccess{
+		Token: "thisIsTheNewToken1234567",
+		ValidityPeriod: model.TimePeriod{
+			StartDate: time.Date(2023, 2, 1, 0, 0, 0, 0, time.UTC),
+			EndDate:   time.Date(2023, 3, 1, 0, 0, 0, 0, time.UTC),
+		},
+	}
+
+	newTokenEntity := *mappers.MapTokenToDb(&newToken)
+
+	mockConnection.EXPECT().UpdateOne(
+		ctx,
+		collectionPrefix+CollectionBaseName,
+		factory.FilterElementMatch(
+			"rentals",
+			factory.FilterMatch(existingRental),
+		),
+		factory.UpdateMatchingArrayElement(
+			"rentals",
+			"trunkToken",
+			newTokenEntity,
+		),
+		false, // no upsert
+	).Return(nil)
+
+	crud := NewICRUD(mockConnection, dbConfig, mockTimeProvider)
+	retToken, err := crud.SetTrunkToken(ctx, "rentalId", newToken)
+
+	assert.Nil(t, err)
+	assert.Equal(t, &newToken, retToken)
+}
+
+func TestCrud_SetTrunkToken_success_noRestriction_newToken(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	ctx := context.Background()
+	factory := db.PseudoFactory{}
+
+	mockConnection := mocks.NewMockIConnection(ctrl)
+
+	mockTimeProvider := mocks.NewMockITimeProvider(ctrl)
+	mockTimeProvider.EXPECT().Now().Return(
+		time.Date(2023, 6, 1, 1, 0, 0, 0, time.UTC),
+	)
+
+	existingRental := entities.Rental{
+		RentalId:   "rentalId",
+		CustomerId: "customer",
+		RentalPeriod: entities.TimePeriod{
+			StartDate: time.Date(2023, 1, 1, 0, 0, 0, 0, time.UTC),
+			EndDate:   time.Date(2024, 1, 1, 0, 0, 0, 0, time.UTC),
+		},
+		TrunkToken: nil,
+	}
+
+	mockConnection.EXPECT().GetFactory().Return(&factory)
+	mockConnection.EXPECT().Aggregate(
+		ctx,
+		collectionPrefix+CollectionBaseName,
+		factory.ArrayFilterAggregation(
+			"rentals",
+			factory.FilterEqual("rentals.rentalId", "rentalId"),
+			1, // limit to 1
+			nil,
+		),
+		gomock.Any(),
+	).SetArg(3, []entities.Car{
+		{
+			Vin:     "AVWAA71K08W201031",
+			Rentals: []entities.Rental{existingRental},
+		},
+	}).Return(nil)
+
+	newToken := model.TrunkAccess{
+		Token: "thisIsTheNewToken1234567",
+		ValidityPeriod: model.TimePeriod{
+			StartDate: time.Date(2023, 2, 1, 0, 0, 0, 0, time.UTC),
+			EndDate:   time.Date(2023, 3, 1, 0, 0, 0, 0, time.UTC),
+		},
+	}
+
+	newTokenEntity := *mappers.MapTokenToDb(&newToken)
+
+	mockConnection.EXPECT().UpdateOne(
+		ctx,
+		collectionPrefix+CollectionBaseName,
+		factory.FilterElementMatch(
+			"rentals",
+			factory.FilterMatch(existingRental),
+		),
+		factory.UpdateMatchingArrayElement(
+			"rentals",
+			"trunkToken",
+			newTokenEntity,
+		),
+		false, // no upsert
+	).Return(nil)
+
+	crud := NewICRUD(mockConnection, dbConfig, mockTimeProvider)
+	retToken, err := crud.SetTrunkToken(ctx, "rentalId", newToken)
+
+	assert.Nil(t, err)
+	assert.Equal(t, &newToken, retToken)
+}
+
+func TestCrud_SetTrunkToken_success_restriction_newToken(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	ctx := context.Background()
+	factory := db.PseudoFactory{}
+
+	mockConnection := mocks.NewMockIConnection(ctrl)
+
+	mockTimeProvider := mocks.NewMockITimeProvider(ctrl)
+	mockTimeProvider.EXPECT().Now().Return(
+		time.Date(2023, 6, 1, 1, 0, 0, 0, time.UTC),
+	)
+
+	existingRental := entities.Rental{
+		RentalId:   "rentalId",
+		CustomerId: "customer",
+		RentalPeriod: entities.TimePeriod{
+			StartDate: time.Date(2023, 1, 1, 0, 0, 0, 0, time.UTC),
+			EndDate:   time.Date(2024, 1, 1, 0, 0, 0, 0, time.UTC),
+		},
+		TrunkToken: nil,
+	}
+
+	mockConnection.EXPECT().GetFactory().Return(&factory)
+	mockConnection.EXPECT().Aggregate(
+		ctx,
+		collectionPrefix+CollectionBaseName,
+		factory.ArrayFilterAggregation(
+			"rentals",
+			factory.FilterEqual("rentals.rentalId", "rentalId"),
+			1, // limit to 1
+			nil,
+		),
+		gomock.Any(),
+	).SetArg(3, []entities.Car{
+		{
+			Vin:     "AVWAA71K08W201031",
+			Rentals: []entities.Rental{existingRental},
+		},
+	}).Return(nil)
+
+	newToken := model.TrunkAccess{
+		Token: "thisIsTheNewToken1234567",
+		ValidityPeriod: model.TimePeriod{
+			StartDate: time.Date(2023, 6, 1, 0, 0, 0, 0, time.UTC),
+			EndDate:   time.Date(2025, 1, 1, 0, 0, 0, 0, time.UTC),
+		},
+	}
+
+	newTokenRestricted := model.TrunkAccess{
+		Token: "thisIsTheNewToken1234567",
+		ValidityPeriod: model.TimePeriod{
+			StartDate: time.Date(2023, 6, 1, 0, 0, 0, 0, time.UTC),
+			EndDate:   time.Date(2024, 1, 1, 0, 0, 0, 0, time.UTC),
+		},
+	}
+
+	newTokenEntity := *mappers.MapTokenToDb(&newTokenRestricted)
+
+	mockConnection.EXPECT().UpdateOne(
+		ctx,
+		collectionPrefix+CollectionBaseName,
+		factory.FilterElementMatch(
+			"rentals",
+			factory.FilterMatch(existingRental),
+		),
+		factory.UpdateMatchingArrayElement(
+			"rentals",
+			"trunkToken",
+			newTokenEntity,
+		),
+		false, // no upsert
+	).Return(nil)
+
+	crud := NewICRUD(mockConnection, dbConfig, mockTimeProvider)
+	retToken, err := crud.SetTrunkToken(ctx, "rentalId", newToken)
+
+	assert.Nil(t, err)
+	assert.Equal(t, &newTokenRestricted, retToken)
+}
+
+func TestCrud_SetTrunkToken_optimisticLockingError_recoverAfter1_restrict(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	ctx := context.Background()
+	factory := db.PseudoFactory{}
+
+	mockConnection := mocks.NewMockIConnection(ctrl)
+
+	mockTimeProvider := mocks.NewMockITimeProvider(ctrl)
+	currentTime := time.Date(2023, 4, 1, 1, 0, 0, 0, time.UTC)
+	mockTimeProvider.EXPECT().Now().Return(currentTime).Times(2)
+
+	existingRental := entities.Rental{
+		RentalId:   "rentalId",
+		CustomerId: "customer",
+		RentalPeriod: entities.TimePeriod{
+			StartDate: time.Date(2023, 1, 1, 0, 0, 0, 0, time.UTC),
+			EndDate:   time.Date(2024, 1, 1, 0, 0, 0, 0, time.UTC),
+		},
+		TrunkToken: nil,
+	}
+
+	mockConnection.EXPECT().GetFactory().Return(&factory)
+	mockConnection.EXPECT().GetFactory().Return(&factory)
+
+	mockConnection.EXPECT().Aggregate(
+		ctx,
+		collectionPrefix+CollectionBaseName,
+		factory.ArrayFilterAggregation(
+			"rentals",
+			factory.FilterEqual("rentals.rentalId", "rentalId"),
+			1, // limit to 1
+			nil,
+		),
+		gomock.Any(),
+	).SetArg(3, []entities.Car{
+		{
+			Vin:     "AVWAA71K08W201031",
+			Rentals: []entities.Rental{existingRental},
+		},
+	}).Return(nil)
+
+	newToken := model.TrunkAccess{
+		Token: "thisIsTheNewToken1234567",
+		ValidityPeriod: model.TimePeriod{
+			StartDate: time.Date(2023, 1, 1, 0, 0, 0, 0, time.UTC),
+			EndDate:   time.Date(2023, 10, 1, 0, 0, 0, 0, time.UTC),
+		},
+	}
+
+	newTokenEntity := *mappers.MapTokenToDb(&newToken)
+
+	mockConnection.EXPECT().UpdateOne(
+		ctx,
+		collectionPrefix+CollectionBaseName,
+		factory.FilterElementMatch(
+			"rentals",
+			factory.FilterMatch(existingRental),
+		),
+		factory.UpdateMatchingArrayElement(
+			"rentals",
+			"trunkToken",
+			newTokenEntity,
+		),
+		false, // no upsert
+	).Return(db.NoDocumentsError)
+
+	existingRentalAfterError := entities.Rental{
+		RentalId:   "rentalId",
+		CustomerId: "remotsuc",
+		RentalPeriod: entities.TimePeriod{
+			StartDate: time.Date(2023, 1, 1, 0, 0, 0, 0, time.UTC),
+			EndDate:   time.Date(2023, 6, 1, 0, 0, 0, 0, time.UTC),
+		},
+		TrunkToken: nil,
+	}
+
+	// CRUD should retry by first retrieving the rental again
+	mockConnection.EXPECT().Aggregate(
+		ctx,
+		collectionPrefix+CollectionBaseName,
+		factory.ArrayFilterAggregation(
+			"rentals",
+			factory.FilterEqual("rentals.rentalId", "rentalId"),
+			1, // limit to 1
+			nil,
+		),
+		gomock.Any(),
+	).SetArg(3, []entities.Car{
+		{
+			Vin:     "AVWAA71K08W201031",
+			Rentals: []entities.Rental{existingRentalAfterError},
+		},
+	}).Return(nil)
+
+	// the token should be restricted to the new rental period after the optimistic locking error
+	newTokenRestricted := model.TrunkAccess{
+		Token: "thisIsTheNewToken1234567",
+		ValidityPeriod: model.TimePeriod{
+			StartDate: time.Date(2023, 1, 1, 0, 0, 0, 0, time.UTC),
+			EndDate:   time.Date(2023, 6, 1, 0, 0, 0, 0, time.UTC),
+		},
+	}
+
+	newTokenEntity = *mappers.MapTokenToDb(&newTokenRestricted)
+
+	mockConnection.EXPECT().UpdateOne(
+		ctx,
+		collectionPrefix+CollectionBaseName,
+		factory.FilterElementMatch(
+			"rentals",
+			factory.FilterMatch(existingRentalAfterError),
+		),
+		factory.UpdateMatchingArrayElement(
+			"rentals",
+			"trunkToken",
+			newTokenEntity,
+		),
+		false, // no upsert
+	).Return(nil)
+
+	crud := NewICRUD(mockConnection, dbConfig, mockTimeProvider)
+	retToken, err := crud.SetTrunkToken(ctx, "rentalId", newToken)
+
+	assert.Nil(t, err)
+	assert.Equal(t, &newTokenRestricted, retToken)
+}
+
+func TestCrud_SetTrunkToken_optimisticLockingError_recoverAfter1_rentalDisappears(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	ctx := context.Background()
+	factory := db.PseudoFactory{}
+
+	mockConnection := mocks.NewMockIConnection(ctrl)
+
+	mockTimeProvider := mocks.NewMockITimeProvider(ctrl)
+	currentTime := time.Date(2023, 4, 1, 1, 0, 0, 0, time.UTC)
+	mockTimeProvider.EXPECT().Now().Return(currentTime).Times(1)
+
+	existingRental := entities.Rental{
+		RentalId:   "rentalId",
+		CustomerId: "customer",
+		RentalPeriod: entities.TimePeriod{
+			StartDate: time.Date(2023, 1, 1, 0, 0, 0, 0, time.UTC),
+			EndDate:   time.Date(2024, 1, 1, 0, 0, 0, 0, time.UTC),
+		},
+		TrunkToken: nil,
+	}
+
+	mockConnection.EXPECT().GetFactory().Return(&factory)
+	mockConnection.EXPECT().GetFactory().Return(&factory)
+
+	mockConnection.EXPECT().Aggregate(
+		ctx,
+		collectionPrefix+CollectionBaseName,
+		factory.ArrayFilterAggregation(
+			"rentals",
+			factory.FilterEqual("rentals.rentalId", "rentalId"),
+			1, // limit to 1
+			nil,
+		),
+		gomock.Any(),
+	).SetArg(3, []entities.Car{
+		{
+			Vin:     "AVWAA71K08W201031",
+			Rentals: []entities.Rental{existingRental},
+		},
+	}).Return(nil)
+
+	newToken := model.TrunkAccess{
+		Token: "thisIsTheNewToken1234567",
+		ValidityPeriod: model.TimePeriod{
+			StartDate: time.Date(2023, 1, 1, 0, 0, 0, 0, time.UTC),
+			EndDate:   time.Date(2023, 10, 1, 0, 0, 0, 0, time.UTC),
+		},
+	}
+
+	newTokenEntity := *mappers.MapTokenToDb(&newToken)
+
+	mockConnection.EXPECT().UpdateOne(
+		ctx,
+		collectionPrefix+CollectionBaseName,
+		factory.FilterElementMatch(
+			"rentals",
+			factory.FilterMatch(existingRental),
+		),
+		factory.UpdateMatchingArrayElement(
+			"rentals",
+			"trunkToken",
+			newTokenEntity,
+		),
+		false, // no upsert
+	).Return(db.NoDocumentsError)
+
+	// CRUD should retry by first retrieving the rental again
+	mockConnection.EXPECT().Aggregate(
+		ctx,
+		collectionPrefix+CollectionBaseName,
+		factory.ArrayFilterAggregation(
+			"rentals",
+			factory.FilterEqual("rentals.rentalId", "rentalId"),
+			1, // limit to 1
+			nil,
+		),
+		gomock.Any(),
+	).Return(nil)
+
+	crud := NewICRUD(mockConnection, dbConfig, mockTimeProvider)
+	retToken, err := crud.SetTrunkToken(ctx, "rentalId", newToken)
+
+	assert.ErrorIs(t, err, rentalErrors.ErrRentalNotFound)
+	assert.Nil(t, retToken)
+}
+
+func TestCrud_SetTrunkToken_optimisticLockingError_recoverAfter1_rentalExpired(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	ctx := context.Background()
+	factory := db.PseudoFactory{}
+
+	mockConnection := mocks.NewMockIConnection(ctrl)
+
+	mockTimeProvider := mocks.NewMockITimeProvider(ctrl)
+	currentTime := time.Date(2023, 4, 1, 1, 0, 0, 0, time.UTC)
+	mockTimeProvider.EXPECT().Now().Return(currentTime).Times(2)
+
+	existingRental := entities.Rental{
+		RentalId:   "rentalId",
+		CustomerId: "customer",
+		RentalPeriod: entities.TimePeriod{
+			StartDate: time.Date(2023, 1, 1, 0, 0, 0, 0, time.UTC),
+			EndDate:   time.Date(2024, 1, 1, 0, 0, 0, 0, time.UTC),
+		},
+		TrunkToken: nil,
+	}
+
+	mockConnection.EXPECT().GetFactory().Return(&factory)
+	mockConnection.EXPECT().GetFactory().Return(&factory)
+
+	mockConnection.EXPECT().Aggregate(
+		ctx,
+		collectionPrefix+CollectionBaseName,
+		factory.ArrayFilterAggregation(
+			"rentals",
+			factory.FilterEqual("rentals.rentalId", "rentalId"),
+			1, // limit to 1
+			nil,
+		),
+		gomock.Any(),
+	).SetArg(3, []entities.Car{
+		{
+			Vin:     "AVWAA71K08W201031",
+			Rentals: []entities.Rental{existingRental},
+		},
+	}).Return(nil)
+
+	newToken := model.TrunkAccess{
+		Token: "thisIsTheNewToken1234567",
+		ValidityPeriod: model.TimePeriod{
+			StartDate: time.Date(2023, 1, 1, 0, 0, 0, 0, time.UTC),
+			EndDate:   time.Date(2023, 10, 1, 0, 0, 0, 0, time.UTC),
+		},
+	}
+
+	newTokenEntity := *mappers.MapTokenToDb(&newToken)
+
+	mockConnection.EXPECT().UpdateOne(
+		ctx,
+		collectionPrefix+CollectionBaseName,
+		factory.FilterElementMatch(
+			"rentals",
+			factory.FilterMatch(existingRental),
+		),
+		factory.UpdateMatchingArrayElement(
+			"rentals",
+			"trunkToken",
+			newTokenEntity,
+		),
+		false, // no upsert
+	).Return(db.NoDocumentsError)
+
+	// the rental is now expired
+	existingRentalAfterError := entities.Rental{
+		RentalId:   "rentalId",
+		CustomerId: "remotsuc",
+		RentalPeriod: entities.TimePeriod{
+			StartDate: time.Date(2023, 1, 1, 0, 0, 0, 0, time.UTC),
+			EndDate:   time.Date(2023, 3, 1, 0, 0, 0, 0, time.UTC),
+		},
+		TrunkToken: nil,
+	}
+
+	// CRUD should retry by first retrieving the rental again
+	mockConnection.EXPECT().Aggregate(
+		ctx,
+		collectionPrefix+CollectionBaseName,
+		factory.ArrayFilterAggregation(
+			"rentals",
+			factory.FilterEqual("rentals.rentalId", "rentalId"),
+			1, // limit to 1
+			nil,
+		),
+		gomock.Any(),
+	).SetArg(3, []entities.Car{
+		{
+			Vin:     "AVWAA71K08W201031",
+			Rentals: []entities.Rental{existingRentalAfterError},
+		},
+	}).Return(nil)
+
+	crud := NewICRUD(mockConnection, dbConfig, mockTimeProvider)
+	retToken, err := crud.SetTrunkToken(ctx, "rentalId", newToken)
+
+	assert.ErrorIs(t, err, rentalErrors.ErrRentalNotActive)
+	assert.Nil(t, retToken)
+}
+
+func TestCrud_SetTrunkToken_optimisticLockingError_recoverAfter2(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	ctx := context.Background()
+	factory := db.PseudoFactory{}
+
+	mockConnection := mocks.NewMockIConnection(ctrl)
+
+	mockTimeProvider := mocks.NewMockITimeProvider(ctrl)
+	currentTime := time.Date(2023, 4, 1, 1, 0, 0, 0, time.UTC)
+	mockTimeProvider.EXPECT().Now().Return(currentTime).Times(3)
+
+	existingRental := entities.Rental{
+		RentalId:   "rentalId",
+		CustomerId: "customer",
+		RentalPeriod: entities.TimePeriod{
+			StartDate: time.Date(2023, 1, 1, 0, 0, 0, 0, time.UTC),
+			EndDate:   time.Date(2024, 1, 1, 0, 0, 0, 0, time.UTC),
+		},
+		TrunkToken: nil,
+	}
+
+	mockConnection.EXPECT().GetFactory().Return(&factory).Times(3)
+
+	mockConnection.EXPECT().Aggregate(
+		ctx,
+		collectionPrefix+CollectionBaseName,
+		factory.ArrayFilterAggregation(
+			"rentals",
+			factory.FilterEqual("rentals.rentalId", "rentalId"),
+			1, // limit to 1
+			nil,
+		),
+		gomock.Any(),
+	).SetArg(3, []entities.Car{
+		{
+			Vin:     "AVWAA71K08W201031",
+			Rentals: []entities.Rental{existingRental},
+		},
+	}).Return(nil).Times(3)
+
+	newToken := model.TrunkAccess{
+		Token: "thisIsTheNewToken1234567",
+		ValidityPeriod: model.TimePeriod{
+			StartDate: time.Date(2023, 1, 1, 0, 0, 0, 0, time.UTC),
+			EndDate:   time.Date(2023, 10, 1, 0, 0, 0, 0, time.UTC),
+		},
+	}
+
+	newTokenEntity := *mappers.MapTokenToDb(&newToken)
+
+	mockConnection.EXPECT().UpdateOne(
+		ctx,
+		collectionPrefix+CollectionBaseName,
+		factory.FilterElementMatch(
+			"rentals",
+			factory.FilterMatch(existingRental),
+		),
+		factory.UpdateMatchingArrayElement(
+			"rentals",
+			"trunkToken",
+			newTokenEntity,
+		),
+		false, // no upsert
+	).Return(db.NoDocumentsError).Times(2)
+
+	mockConnection.EXPECT().UpdateOne(
+		ctx,
+		collectionPrefix+CollectionBaseName,
+		factory.FilterElementMatch(
+			"rentals",
+			factory.FilterMatch(existingRental),
+		),
+		factory.UpdateMatchingArrayElement(
+			"rentals",
+			"trunkToken",
+			newTokenEntity,
+		),
+		false, // no upsert
+	).Return(nil)
+
+	crud := NewICRUD(mockConnection, dbConfig, mockTimeProvider)
+	retToken, err := crud.SetTrunkToken(ctx, "rentalId", newToken)
+
+	assert.Nil(t, err)
+	assert.Equal(t, &newToken, retToken)
+}
+
+func TestCrud_SetTrunkToken_optimisticLockingError_failAfter3(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	ctx := context.Background()
+	factory := db.PseudoFactory{}
+
+	mockConnection := mocks.NewMockIConnection(ctrl)
+
+	mockTimeProvider := mocks.NewMockITimeProvider(ctrl)
+	currentTime := time.Date(2023, 4, 1, 1, 0, 0, 0, time.UTC)
+	mockTimeProvider.EXPECT().Now().Return(currentTime).Times(3)
+
+	existingRental := entities.Rental{
+		RentalId:   "rentalId",
+		CustomerId: "customer",
+		RentalPeriod: entities.TimePeriod{
+			StartDate: time.Date(2023, 1, 1, 0, 0, 0, 0, time.UTC),
+			EndDate:   time.Date(2024, 1, 1, 0, 0, 0, 0, time.UTC),
+		},
+		TrunkToken: nil,
+	}
+
+	mockConnection.EXPECT().GetFactory().Return(&factory).Times(3)
+
+	mockConnection.EXPECT().Aggregate(
+		ctx,
+		collectionPrefix+CollectionBaseName,
+		factory.ArrayFilterAggregation(
+			"rentals",
+			factory.FilterEqual("rentals.rentalId", "rentalId"),
+			1, // limit to 1
+			nil,
+		),
+		gomock.Any(),
+	).SetArg(3, []entities.Car{
+		{
+			Vin:     "AVWAA71K08W201031",
+			Rentals: []entities.Rental{existingRental},
+		},
+	}).Return(nil).Times(3)
+
+	newToken := model.TrunkAccess{
+		Token: "thisIsTheNewToken1234567",
+		ValidityPeriod: model.TimePeriod{
+			StartDate: time.Date(2023, 1, 1, 0, 0, 0, 0, time.UTC),
+			EndDate:   time.Date(2023, 10, 1, 0, 0, 0, 0, time.UTC),
+		},
+	}
+
+	newTokenEntity := *mappers.MapTokenToDb(&newToken)
+
+	mockConnection.EXPECT().UpdateOne(
+		ctx,
+		collectionPrefix+CollectionBaseName,
+		factory.FilterElementMatch(
+			"rentals",
+			factory.FilterMatch(existingRental),
+		),
+		factory.UpdateMatchingArrayElement(
+			"rentals",
+			"trunkToken",
+			newTokenEntity,
+		),
+		false, // no upsert
+	).Return(db.NoDocumentsError).Times(3)
+
+	crud := NewICRUD(mockConnection, dbConfig, mockTimeProvider)
+	retToken, err := crud.SetTrunkToken(ctx, "rentalId", newToken)
+
+	assert.ErrorIs(t, err, OptimisticLockingError)
+	assert.Nil(t, retToken)
+}
+
+func TestCrud_SetTrunkToken_rentalNotFound(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	ctx := context.Background()
+	factory := db.PseudoFactory{}
+
+	mockConnection := mocks.NewMockIConnection(ctrl)
+
+	mockTimeProvider := mocks.NewMockITimeProvider(ctrl)
+
+	mockConnection.EXPECT().GetFactory().Return(&factory)
+
+	mockConnection.EXPECT().Aggregate(
+		ctx,
+		collectionPrefix+CollectionBaseName,
+		factory.ArrayFilterAggregation(
+			"rentals",
+			factory.FilterEqual("rentals.rentalId", "rentalId"),
+			1, // limit to 1
+			nil,
+		),
+		gomock.Any(),
+	).SetArg(3, []entities.Car{}).Return(nil)
+
+	crud := NewICRUD(mockConnection, dbConfig, mockTimeProvider)
+	retToken, err := crud.SetTrunkToken(ctx, "rentalId", model.TrunkAccess{})
+
+	assert.ErrorIs(t, err, rentalErrors.ErrRentalNotFound)
+	assert.Nil(t, retToken)
+}
+
+func TestCrud_SetTrunkToken_dbError_aggregate(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	ctx := context.Background()
+	factory := db.PseudoFactory{}
+
+	mockConnection := mocks.NewMockIConnection(ctrl)
+
+	mockTimeProvider := mocks.NewMockITimeProvider(ctrl)
+
+	mockConnection.EXPECT().GetFactory().Return(&factory)
+
+	dbError := errors.New("db error")
+
+	mockConnection.EXPECT().Aggregate(
+		ctx,
+		collectionPrefix+CollectionBaseName,
+		factory.ArrayFilterAggregation(
+			"rentals",
+			factory.FilterEqual("rentals.rentalId", "rentalId"),
+			1, // limit to 1
+			nil,
+		),
+		gomock.Any(),
+	).Return(dbError)
+
+	crud := NewICRUD(mockConnection, dbConfig, mockTimeProvider)
+	retToken, err := crud.SetTrunkToken(ctx, "rentalId", model.TrunkAccess{})
+
+	assert.ErrorIs(t, err, dbError)
+	assert.Nil(t, retToken)
+}
+
+func TestCrud_SetTrunkToken_dbError_update(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	ctx := context.Background()
+	factory := db.PseudoFactory{}
+
+	mockConnection := mocks.NewMockIConnection(ctrl)
+
+	mockTimeProvider := mocks.NewMockITimeProvider(ctrl)
+	mockTimeProvider.EXPECT().Now().Return(
+		time.Date(2023, 6, 1, 1, 0, 0, 0, time.UTC),
+	)
+
+	existingRental := entities.Rental{
+		RentalId:   "rentalId",
+		CustomerId: "customer",
+		RentalPeriod: entities.TimePeriod{
+			StartDate: time.Date(2023, 1, 1, 0, 0, 0, 0, time.UTC),
+			EndDate:   time.Date(2024, 1, 1, 0, 0, 0, 0, time.UTC),
+		},
+		TrunkToken: nil,
+	}
+
+	mockConnection.EXPECT().GetFactory().Return(&factory)
+	mockConnection.EXPECT().Aggregate(
+		ctx,
+		collectionPrefix+CollectionBaseName,
+		factory.ArrayFilterAggregation(
+			"rentals",
+			factory.FilterEqual("rentals.rentalId", "rentalId"),
+			1, // limit to 1
+			nil,
+		),
+		gomock.Any(),
+	).SetArg(3, []entities.Car{
+		{
+			Vin:     "AVWAA71K08W201031",
+			Rentals: []entities.Rental{existingRental},
+		},
+	}).Return(nil)
+
+	newToken := model.TrunkAccess{
+		Token: "thisIsTheNewToken1234567",
+		ValidityPeriod: model.TimePeriod{
+			StartDate: time.Date(2023, 2, 1, 0, 0, 0, 0, time.UTC),
+			EndDate:   time.Date(2023, 3, 1, 0, 0, 0, 0, time.UTC),
+		},
+	}
+
+	newTokenEntity := *mappers.MapTokenToDb(&newToken)
+
+	dbError := errors.New("db error")
+
+	mockConnection.EXPECT().UpdateOne(
+		ctx,
+		collectionPrefix+CollectionBaseName,
+		factory.FilterElementMatch(
+			"rentals",
+			factory.FilterMatch(existingRental),
+		),
+		factory.UpdateMatchingArrayElement(
+			"rentals",
+			"trunkToken",
+			newTokenEntity,
+		),
+		false, // no upsert
+	).Return(dbError)
+
+	crud := NewICRUD(mockConnection, dbConfig, mockTimeProvider)
+	retToken, err := crud.SetTrunkToken(ctx, "rentalId", newToken)
+
+	assert.ErrorIs(t, err, dbError)
+	assert.Nil(t, retToken)
+}
+
+func TestCrud_SetTrunkToken_periodNotOverlapping(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	ctx := context.Background()
+	factory := db.PseudoFactory{}
+
+	mockConnection := mocks.NewMockIConnection(ctrl)
+
+	mockTimeProvider := mocks.NewMockITimeProvider(ctrl)
+	mockTimeProvider.EXPECT().Now().Return(
+		time.Date(2023, 6, 1, 1, 0, 0, 0, time.UTC),
+	)
+
+	existingRental := entities.Rental{
+		RentalId:   "rentalId",
+		CustomerId: "customer",
+		RentalPeriod: entities.TimePeriod{
+			StartDate: time.Date(2023, 1, 1, 0, 0, 0, 0, time.UTC),
+			EndDate:   time.Date(2024, 1, 1, 0, 0, 0, 0, time.UTC),
+		},
+		TrunkToken: nil,
+	}
+
+	mockConnection.EXPECT().GetFactory().Return(&factory)
+	mockConnection.EXPECT().Aggregate(
+		ctx,
+		collectionPrefix+CollectionBaseName,
+		factory.ArrayFilterAggregation(
+			"rentals",
+			factory.FilterEqual("rentals.rentalId", "rentalId"),
+			1, // limit to 1
+			nil,
+		),
+		gomock.Any(),
+	).SetArg(3, []entities.Car{
+		{
+			Vin:     "AVWAA71K08W201031",
+			Rentals: []entities.Rental{existingRental},
+		},
+	}).Return(nil)
+
+	newToken := model.TrunkAccess{
+		Token: "thisIsTheNewToken1234567",
+		ValidityPeriod: model.TimePeriod{
+			StartDate: time.Date(2025, 1, 1, 0, 0, 0, 0, time.UTC),
+			EndDate:   time.Date(2026, 1, 1, 0, 0, 0, 0, time.UTC),
+		},
+	}
+
+	crud := NewICRUD(mockConnection, dbConfig, mockTimeProvider)
+	retToken, err := crud.SetTrunkToken(ctx, "rentalId", newToken)
+
+	assert.ErrorIs(t, err, rentalErrors.ErrRentalNotOverlapping)
+	assert.Nil(t, retToken)
+}
+
+func TestCrud_SetTrunkToken_rentalNotActive(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	ctx := context.Background()
+	factory := db.PseudoFactory{}
+
+	mockConnection := mocks.NewMockIConnection(ctrl)
+
+	mockTimeProvider := mocks.NewMockITimeProvider(ctrl)
+	mockTimeProvider.EXPECT().Now().Return(
+		time.Date(2100, 1, 1, 1, 0, 0, 0, time.UTC),
+	)
+
+	existingRental := entities.Rental{
+		RentalId:   "rentalId",
+		CustomerId: "customer",
+		RentalPeriod: entities.TimePeriod{
+			StartDate: time.Date(2023, 1, 1, 0, 0, 0, 0, time.UTC),
+			EndDate:   time.Date(2024, 1, 1, 0, 0, 0, 0, time.UTC),
+		},
+		TrunkToken: nil,
+	}
+
+	mockConnection.EXPECT().GetFactory().Return(&factory)
+	mockConnection.EXPECT().Aggregate(
+		ctx,
+		collectionPrefix+CollectionBaseName,
+		factory.ArrayFilterAggregation(
+			"rentals",
+			factory.FilterEqual("rentals.rentalId", "rentalId"),
+			1, // limit to 1
+			nil,
+		),
+		gomock.Any(),
+	).SetArg(3, []entities.Car{
+		{
+			Vin:     "AVWAA71K08W201031",
+			Rentals: []entities.Rental{existingRental},
+		},
+	}).Return(nil)
+
+	newToken := model.TrunkAccess{
+		Token: "thisIsTheNewToken1234567",
+		ValidityPeriod: model.TimePeriod{
+			StartDate: time.Date(2023, 2, 1, 0, 0, 0, 0, time.UTC),
+			EndDate:   time.Date(2023, 3, 1, 0, 0, 0, 0, time.UTC),
+		},
+	}
+
+	crud := NewICRUD(mockConnection, dbConfig, mockTimeProvider)
+	retToken, err := crud.SetTrunkToken(ctx, "rentalId", newToken)
+
+	assert.ErrorIs(t, err, rentalErrors.ErrRentalNotActive)
+	assert.Nil(t, retToken)
 }
 
 func TestCrud_GetRental_success(t *testing.T) {

@@ -115,6 +115,14 @@ var rentalCustomerShort2 = model.Rental{
 
 var customerRentalsShort = []model.Rental{rentalCustomerShort1, rentalCustomerShort2}
 
+var trunkAccess = model.TrunkAccess{
+	Token: "bumrLuCMbumrLuCMbumrLuCM",
+	ValidityPeriod: model.TimePeriod{
+		StartDate: time.Date(2023, 1, 1, 0, 0, 0, 0, time.UTC),
+		EndDate:   time.Date(2024, 1, 1, 0, 0, 0, 0, time.UTC),
+	},
+}
+
 func TestController_GetAvailableCars_success(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
@@ -414,6 +422,168 @@ func TestController_GetOverview_operationsError(t *testing.T) {
 
 	controller := NewController(mockOperations, mockTime)
 	err := controller.GetOverview(mockContext, model.GetOverviewParams{CustomerId: exampleCustomerID})
+	assert.ErrorIs(t, err, operationsError)
+}
+
+func TestController_GrantTrunkAccess_success(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	ctx := context.Background()
+
+	request, _ := http.NewRequestWithContext(ctx, "POST", "", nil)
+
+	mockContext := mocks.NewMockContext(ctrl)
+	mockContext.EXPECT().Request().Return(request)
+	mockContext.EXPECT().Bind(gomock.Any()).SetArg(0, trunkAccess.ValidityPeriod).Return(nil)
+	mockContext.EXPECT().JSON(http.StatusCreated, &trunkAccess)
+
+	mockOperations := mocks.NewMockIOperations(ctrl)
+	mockOperations.EXPECT().GrantTrunkAccess(ctx, "rentalId", trunkAccess.ValidityPeriod).
+		Return(&trunkAccess, nil)
+
+	mockTime := mocks.NewMockITimeProvider(ctrl)
+
+	controller := NewController(mockOperations, mockTime)
+	err := controller.GrantTrunkAccess(mockContext, "rentalId")
+
+	assert.Nil(t, err)
+}
+
+func TestController_GrantTrinkAccess_invalidTimePeriod(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	mockContext := mocks.NewMockContext(ctrl)
+	mockContext.EXPECT().Bind(gomock.Any()).SetArg(0, invalidTimePeriod).Return(nil)
+
+	mockOperations := mocks.NewMockIOperations(ctrl)
+	mockTime := mocks.NewMockITimeProvider(ctrl)
+
+	controller := NewController(mockOperations, mockTime)
+	err := controller.GrantTrunkAccess(mockContext, "rentalId")
+
+	assert.Equal(t, err, echo.NewHTTPError(http.StatusBadRequest, "startDate must be before endDate"))
+}
+
+func TestController_GrantTrunkAccess_rentalNotFound(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	ctx := context.Background()
+
+	request, _ := http.NewRequestWithContext(ctx, "POST", "", nil)
+
+	mockContext := mocks.NewMockContext(ctrl)
+	mockContext.EXPECT().Request().Return(request)
+	mockContext.EXPECT().Bind(gomock.Any()).SetArg(0, trunkAccess.ValidityPeriod).Return(nil)
+
+	mockOperations := mocks.NewMockIOperations(ctrl)
+	mockOperations.EXPECT().GrantTrunkAccess(ctx, "rentalId", trunkAccess.ValidityPeriod).
+		Return(nil, rentalErrors.ErrRentalNotFound)
+
+	mockTime := mocks.NewMockITimeProvider(ctrl)
+
+	controller := NewController(mockOperations, mockTime)
+	err := controller.GrantTrunkAccess(mockContext, "rentalId")
+
+	assert.Equal(t, err, echo.NewHTTPError(http.StatusNotFound, "rental not found"))
+}
+
+func TestController_GrantTrunkAccess_rentalNotActive(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	ctx := context.Background()
+
+	request, _ := http.NewRequestWithContext(ctx, "POST", "", nil)
+
+	mockContext := mocks.NewMockContext(ctrl)
+	mockContext.EXPECT().Request().Return(request)
+	mockContext.EXPECT().Bind(gomock.Any()).SetArg(0, trunkAccess.ValidityPeriod).Return(nil)
+
+	mockOperations := mocks.NewMockIOperations(ctrl)
+	mockOperations.EXPECT().GrantTrunkAccess(ctx, "rentalId", trunkAccess.ValidityPeriod).
+		Return(nil, rentalErrors.ErrRentalNotActive)
+
+	mockTime := mocks.NewMockITimeProvider(ctrl)
+
+	controller := NewController(mockOperations, mockTime)
+	err := controller.GrantTrunkAccess(mockContext, "rentalId")
+
+	assert.Equal(t, err, echo.NewHTTPError(http.StatusForbidden, "rental not active"))
+}
+
+func TestController_GrantTrunkAccess_rentalNotOverlapping(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	ctx := context.Background()
+
+	request, _ := http.NewRequestWithContext(ctx, "POST", "", nil)
+
+	mockContext := mocks.NewMockContext(ctrl)
+	mockContext.EXPECT().Request().Return(request)
+	mockContext.EXPECT().Bind(gomock.Any()).SetArg(0, trunkAccess.ValidityPeriod).Return(nil)
+
+	mockOperations := mocks.NewMockIOperations(ctrl)
+	mockOperations.EXPECT().GrantTrunkAccess(ctx, "rentalId", trunkAccess.ValidityPeriod).
+		Return(nil, rentalErrors.ErrRentalNotOverlapping)
+
+	mockTime := mocks.NewMockITimeProvider(ctrl)
+
+	controller := NewController(mockOperations, mockTime)
+	err := controller.GrantTrunkAccess(mockContext, "rentalId")
+
+	assert.Equal(t, err, echo.NewHTTPError(http.StatusForbidden, "rental not overlapping"))
+}
+
+func TestController_GrantTrunkAccess_resourceConflict(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	ctx := context.Background()
+
+	request, _ := http.NewRequestWithContext(ctx, "POST", "", nil)
+
+	mockContext := mocks.NewMockContext(ctrl)
+	mockContext.EXPECT().Request().Return(request)
+	mockContext.EXPECT().Bind(gomock.Any()).SetArg(0, trunkAccess.ValidityPeriod).Return(nil)
+
+	mockOperations := mocks.NewMockIOperations(ctrl)
+	mockOperations.EXPECT().GrantTrunkAccess(ctx, "rentalId", trunkAccess.ValidityPeriod).
+		Return(nil, rentalErrors.ErrResourceConflict)
+
+	mockTime := mocks.NewMockITimeProvider(ctrl)
+
+	controller := NewController(mockOperations, mockTime)
+	err := controller.GrantTrunkAccess(mockContext, "rentalId")
+
+	assert.Equal(t, err, echo.NewHTTPError(http.StatusServiceUnavailable, "failed to grant trunk access"))
+}
+
+func TestController_GrantTrunkAccess_operationsError(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	ctx := context.Background()
+
+	request, _ := http.NewRequestWithContext(ctx, "POST", "", nil)
+
+	mockContext := mocks.NewMockContext(ctrl)
+	mockContext.EXPECT().Request().Return(request)
+	mockContext.EXPECT().Bind(gomock.Any()).SetArg(0, trunkAccess.ValidityPeriod).Return(nil)
+
+	mockOperations := mocks.NewMockIOperations(ctrl)
+	operationsError := errors.New("operations error")
+	mockOperations.EXPECT().GrantTrunkAccess(ctx, "rentalId", trunkAccess.ValidityPeriod).
+		Return(nil, operationsError)
+
+	mockTime := mocks.NewMockITimeProvider(ctrl)
+
+	controller := NewController(mockOperations, mockTime)
+	err := controller.GrantTrunkAccess(mockContext, "rentalId")
+
 	assert.ErrorIs(t, err, operationsError)
 }
 

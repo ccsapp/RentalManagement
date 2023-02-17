@@ -196,11 +196,40 @@ type TechnicalSpecificationTransmission string
 
 // TimePeriod A period of time
 type TimePeriod struct {
-	// EndDate end of the time period
-	EndDate time.Time `json:"endDate"`
-
 	// StartDate start of the time period
 	StartDate time.Time `json:"startDate"`
+
+	// EndDate end of the time period
+	EndDate time.Time `json:"endDate"`
+}
+
+// RestrictTo restricts the time period to the given other time period
+// and returns the result. If the time periods do not overlap, nil is returned.
+func (tp *TimePeriod) RestrictTo(other *TimePeriod) *TimePeriod {
+	outPeriod := &TimePeriod{
+		StartDate: max(tp.StartDate, other.StartDate),
+		EndDate:   min(tp.EndDate, other.EndDate),
+	}
+
+	if !outPeriod.StartDate.Before(outPeriod.EndDate) {
+		return nil
+	}
+
+	return outPeriod
+}
+
+func min(a, b time.Time) time.Time {
+	if a.Before(b) {
+		return a
+	}
+	return b
+}
+
+func max(a, b time.Time) time.Time {
+	if a.After(b) {
+		return a
+	}
+	return b
 }
 
 // TrunkAccess Trunk access token with time

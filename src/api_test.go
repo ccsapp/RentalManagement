@@ -145,6 +145,24 @@ func mapOverviewToRentals(rentals *[]model.Rental) func(*http.Response, *http.Re
 	}
 }
 
+func (suite *ApiTestSuite) getRentalDetailed(id model.RentalId) model.Rental {
+	var rental model.Rental
+	suite.newApiTestWithCarMock().
+		Get("/rentals/" + id).
+		Expect(suite.T()).
+		Status(http.StatusOK).
+		Assert(mapDetailedToRental(&rental)).
+		End()
+	return rental
+}
+
+func mapDetailedToRental(rental *model.Rental) func(*http.Response, *http.Request) error {
+	return func(res *http.Response, _ *http.Request) error {
+		defer func() { _ = res.Body.Close() }()
+		return json.NewDecoder(res.Body).Decode(rental)
+	}
+}
+
 func (suite *ApiTestSuite) TestCreateRental_success_noRentals() {
 	suite.createRental(testdata.VinCar, testdata.TimePeriod2122)
 }
@@ -584,5 +602,337 @@ func (suite *ApiTestSuite) TestGetRentalStatus_invalidRentalId() {
 		Get("/rentals/waytoolongrentalid").
 		Expect(suite.T()).
 		Status(http.StatusBadRequest).
+		End()
+}
+
+func (suite *ApiTestSuite) assertToken(period model.TimePeriod) func(*http.Response, *http.Request) error {
+	return func(res *http.Response, _ *http.Request) error {
+		defer func() { _ = res.Body.Close() }()
+
+		var token model.TrunkAccess
+		if err := json.NewDecoder(res.Body).Decode(&token); err != nil {
+			return err
+		}
+
+		assert.Equal(suite.T(), period, token.ValidityPeriod)
+		assert.Equal(suite.T(), 24, len(token.Token))
+
+		return nil
+	}
+}
+
+func (suite *ApiTestSuite) TestGrantTrunkAccess_success_match() {
+	timePeriod := model.TimePeriod{
+		StartDate: time.Now().Add(10 * time.Millisecond).UTC().Round(time.Millisecond),
+		EndDate:   time.Date(2123, 1, 1, 0, 0, 0, 0, time.UTC),
+	}
+
+	marshalledTime, _ := json.Marshal(timePeriod)
+
+	suite.createRentalForCustomer(testdata.VinCar, string(marshalledTime), "customer")
+
+	time.Sleep(10 * time.Millisecond)
+
+	rentalId := suite.getRentalOverview("customer")[0].Id
+
+	rentalBefore := suite.getRentalDetailed(rentalId)
+
+	suite.newApiTestWithCarMock().
+		Post("/rentals/" + rentalId + "/trunkTokens").
+		JSON(timePeriod).
+		Expect(suite.T()).
+		Status(http.StatusCreated).
+		Assert(suite.assertToken(timePeriod)).
+		End()
+
+	rental := suite.getRentalDetailed(rentalId)
+	assert.Equal(suite.T(), timePeriod, rental.Token.ValidityPeriod)
+	assert.Equal(suite.T(), 24, len(rental.Token.Token))
+	assert.Equal(suite.T(), rentalBefore.Car, rental.Car)
+	assert.Equal(suite.T(), rentalBefore.Active, rental.Active)
+	assert.Equal(suite.T(), rentalBefore.RentalPeriod, rental.RentalPeriod)
+}
+
+func (suite *ApiTestSuite) TestGrantTrunkAccess_success_overwrite() {
+	timePeriod := model.TimePeriod{
+		StartDate: time.Now().Add(10 * time.Millisecond).UTC().Round(time.Millisecond),
+		EndDate:   time.Date(2123, 1, 1, 0, 0, 0, 0, time.UTC),
+	}
+
+	marshalledTime, _ := json.Marshal(timePeriod)
+
+	suite.createRentalForCustomer(testdata.VinCar, string(marshalledTime), "customer")
+
+	time.Sleep(10 * time.Millisecond)
+
+	rentalId := suite.getRentalOverview("customer")[0].Id
+
+	suite.newApiTestWithCarMock().
+		Post("/rentals/" + rentalId + "/trunkTokens").
+		JSON(timePeriod).
+		Expect(suite.T()).
+		Status(http.StatusCreated).
+		Assert(suite.assertToken(timePeriod)).
+		End()
+
+	timePeriod.StartDate = timePeriod.StartDate.Add(24 * time.Hour)
+	timePeriod.EndDate = timePeriod.EndDate.Add(-24 * time.Hour)
+
+	suite.newApiTestWithCarMock().
+		Post("/rentals/" + rentalId + "/trunkTokens").
+		JSON(timePeriod).
+		Expect(suite.T()).
+		Status(http.StatusCreated).
+		Assert(suite.assertToken(timePeriod)).
+		End()
+
+	rental := suite.getRentalDetailed(rentalId)
+	assert.Equal(suite.T(), timePeriod, rental.Token.ValidityPeriod)
+}
+
+func (suite *ApiTestSuite) TestGrantTrunkAccess_success_inside() {
+	timePeriod := model.TimePeriod{
+		StartDate: time.Now().Add(10 * time.Millisecond).UTC().Round(time.Millisecond),
+		EndDate:   time.Date(2123, 1, 1, 0, 0, 0, 0, time.UTC),
+	}
+
+	marshalledTime, _ := json.Marshal(timePeriod)
+
+	suite.createRentalForCustomer(testdata.VinCar, string(marshalledTime), "customer")
+
+	time.Sleep(10 * time.Millisecond)
+
+	timePeriod.StartDate = timePeriod.StartDate.Add(24 * time.Hour)
+	timePeriod.EndDate = timePeriod.EndDate.Add(-24 * time.Hour)
+
+	rentalId := suite.getRentalOverview("customer")[0].Id
+
+	suite.newApiTestWithCarMock().
+		Post("/rentals/" + rentalId + "/trunkTokens").
+		JSON(timePeriod).
+		Expect(suite.T()).
+		Status(http.StatusCreated).
+		Assert(suite.assertToken(timePeriod)).
+		End()
+}
+
+func (suite *ApiTestSuite) TestGrantTrunkAccess_success_outside() {
+	timePeriod := model.TimePeriod{
+		StartDate: time.Now().Add(10 * time.Millisecond).UTC().Round(time.Millisecond),
+		EndDate:   time.Date(2123, 1, 1, 0, 0, 0, 0, time.UTC),
+	}
+
+	marshalledTime, _ := json.Marshal(timePeriod)
+
+	suite.createRentalForCustomer(testdata.VinCar, string(marshalledTime), "customer")
+
+	time.Sleep(10 * time.Millisecond)
+
+	outsideTimePeriod := model.TimePeriod{
+		StartDate: timePeriod.StartDate.Add(-24 * time.Hour),
+		EndDate:   timePeriod.EndDate.Add(24 * time.Hour),
+	}
+
+	rentalId := suite.getRentalOverview("customer")[0].Id
+
+	rentalBefore := suite.getRentalDetailed(rentalId)
+
+	suite.newApiTestWithCarMock().
+		Post("/rentals/" + rentalId + "/trunkTokens").
+		JSON(outsideTimePeriod).
+		Expect(suite.T()).
+		Status(http.StatusCreated).
+		Assert(suite.assertToken(timePeriod)).
+		End()
+
+	rental := suite.getRentalDetailed(rentalId)
+	assert.Equal(suite.T(), timePeriod, rental.Token.ValidityPeriod)
+	assert.Equal(suite.T(), 24, len(rental.Token.Token))
+	assert.Equal(suite.T(), rentalBefore.Car, rental.Car)
+	assert.Equal(suite.T(), rentalBefore.Active, rental.Active)
+	assert.Equal(suite.T(), rentalBefore.RentalPeriod, rental.RentalPeriod)
+}
+
+func (suite *ApiTestSuite) TestGrantTrunkAccess_success_leftOverlap() {
+	timePeriod := model.TimePeriod{
+		StartDate: time.Now().Add(10 * time.Millisecond).UTC().Round(time.Millisecond),
+		EndDate:   time.Date(2123, 1, 1, 0, 0, 0, 0, time.UTC),
+	}
+
+	marshalledTime, _ := json.Marshal(timePeriod)
+
+	suite.createRentalForCustomer(testdata.VinCar, string(marshalledTime), "customer")
+
+	time.Sleep(10 * time.Millisecond)
+
+	leftOverlapTimePeriod := model.TimePeriod{
+		StartDate: timePeriod.StartDate.Add(-24 * time.Hour),
+		EndDate:   timePeriod.EndDate.Add(-24 * time.Hour),
+	}
+
+	timePeriod.EndDate = leftOverlapTimePeriod.EndDate
+
+	rentalId := suite.getRentalOverview("customer")[0].Id
+
+	suite.newApiTestWithCarMock().
+		Post("/rentals/" + rentalId + "/trunkTokens").
+		JSON(leftOverlapTimePeriod).
+		Expect(suite.T()).
+		Status(http.StatusCreated).
+		Assert(suite.assertToken(timePeriod)).
+		End()
+}
+
+func (suite *ApiTestSuite) TestGrantTrunkAccess_success_rightOverlap() {
+	timePeriod := model.TimePeriod{
+		StartDate: time.Now().Add(10 * time.Millisecond).UTC().Round(time.Millisecond),
+		EndDate:   time.Date(2123, 1, 1, 0, 0, 0, 0, time.UTC),
+	}
+
+	marshalledTime, _ := json.Marshal(timePeriod)
+
+	suite.createRentalForCustomer(testdata.VinCar, string(marshalledTime), "customer")
+
+	time.Sleep(10 * time.Millisecond)
+
+	rightOverlapTimePeriod := model.TimePeriod{
+		StartDate: timePeriod.StartDate.Add(24 * time.Hour),
+		EndDate:   timePeriod.EndDate.Add(24 * time.Hour),
+	}
+
+	timePeriod.StartDate = rightOverlapTimePeriod.StartDate
+
+	rentalId := suite.getRentalOverview("customer")[0].Id
+
+	suite.newApiTestWithCarMock().
+		Post("/rentals/" + rentalId + "/trunkTokens").
+		JSON(rightOverlapTimePeriod).
+		Expect(suite.T()).
+		Status(http.StatusCreated).
+		Assert(suite.assertToken(timePeriod)).
+		End()
+}
+
+func (suite *ApiTestSuite) TestGrantTrunkAccess_invalidRentalId() {
+	suite.newApiTestWithCarMock().
+		Post("/rentals/waytoolongrentalid/trunkTokens").
+		JSON(testdata.TimePeriod2122).
+		Expect(suite.T()).
+		Status(http.StatusBadRequest).
+		End()
+}
+
+func (suite *ApiTestSuite) TestGrantTrunkAccess_invalidTimePeriod() {
+	suite.newApiTestWithCarMock().
+		Post("/rentals/rentalId/trunkTokens").
+		JSON(testdata.TimePeriodSemanticInvalid).
+		Expect(suite.T()).
+		Status(http.StatusBadRequest).
+		End()
+}
+
+func (suite *ApiTestSuite) TestGrantTrunkAccess_invalidTimePeriod2() {
+	suite.newApiTestWithCarMock().
+		Post("/rentals/rentalId/trunkTokens").
+		JSON(testdata.TimePeriodSyntaxInvalid).
+		Expect(suite.T()).
+		Status(http.StatusBadRequest).
+		End()
+}
+
+func (suite *ApiTestSuite) TestGrantTrunkAccess_missingTimePeriod() {
+	suite.newApiTestWithCarMock().
+		Post("/rentals/rentalId/trunkTokens").
+		Expect(suite.T()).
+		Status(http.StatusBadRequest).
+		End()
+}
+
+func (suite *ApiTestSuite) TestGrantTrunkAccess_notActiveFuture() {
+	suite.createRentalForCustomer(testdata.VinCar, testdata.TimePeriod2122, "customer")
+
+	rentalId := suite.getRentalOverview("customer")[0].Id
+
+	suite.newApiTestWithCarMock().
+		Post("/rentals/" + rentalId + "/trunkTokens").
+		JSON(testdata.TimePeriod2122).
+		Expect(suite.T()).
+		Status(http.StatusForbidden).
+		End()
+}
+
+func (suite *ApiTestSuite) TestGrantTrunkAccess_notActivePast() {
+	now := time.Now().UTC().Round(time.Millisecond)
+	timePeriod := model.TimePeriod{
+		StartDate: now.Add(10 * time.Millisecond),
+		EndDate:   now.Add(12 * time.Millisecond),
+	}
+
+	marshalledTime, _ := json.Marshal(timePeriod)
+
+	suite.createRentalForCustomer(testdata.VinCar, string(marshalledTime), "customer")
+
+	time.Sleep(15 * time.Millisecond)
+
+	rentalId := suite.getRentalOverview("customer")[0].Id
+
+	suite.newApiTestWithCarMock().
+		Post("/rentals/" + rentalId + "/trunkTokens").
+		JSON(marshalledTime).
+		Expect(suite.T()).
+		Status(http.StatusForbidden).
+		End()
+}
+
+func (suite *ApiTestSuite) TestGrantTrunkAccess_notOverlappingFuture() {
+	timePeriod := model.TimePeriod{
+		StartDate: time.Now().Add(10 * time.Millisecond).UTC().Round(time.Millisecond),
+		EndDate:   time.Date(2123, 1, 1, 0, 0, 0, 0, time.UTC),
+	}
+
+	marshalledTime, _ := json.Marshal(timePeriod)
+
+	suite.createRentalForCustomer(testdata.VinCar, string(marshalledTime), "customer")
+
+	time.Sleep(10 * time.Millisecond)
+
+	rentalId := suite.getRentalOverview("customer")[0].Id
+
+	suite.newApiTestWithCarMock().
+		Post("/rentals/" + rentalId + "/trunkTokens").
+		JSON(testdata.TimePeriod2150).
+		Expect(suite.T()).
+		Status(http.StatusForbidden).
+		End()
+}
+
+func (suite *ApiTestSuite) TestGrantTrunkAccess_notOverlappingPast() {
+	timePeriod := model.TimePeriod{
+		StartDate: time.Now().Add(10 * time.Millisecond).UTC().Round(time.Millisecond),
+		EndDate:   time.Date(2123, 1, 1, 0, 0, 0, 0, time.UTC),
+	}
+
+	marshalledTime, _ := json.Marshal(timePeriod)
+
+	suite.createRentalForCustomer(testdata.VinCar, string(marshalledTime), "customer")
+
+	time.Sleep(10 * time.Millisecond)
+
+	rentalId := suite.getRentalOverview("customer")[0].Id
+
+	suite.newApiTestWithCarMock().
+		Post("/rentals/" + rentalId + "/trunkTokens").
+		JSON(testdata.TimePeriod1900).
+		Expect(suite.T()).
+		Status(http.StatusForbidden).
+		End()
+}
+
+func (suite *ApiTestSuite) TestGrantTrunkAccess_unknownRentalId() {
+	suite.newApiTestWithCarMock().
+		Post("/rentals/unknown1/trunkTokens").
+		JSON(testdata.TimePeriod2122).
+		Expect(suite.T()).
+		Status(http.StatusNotFound).
 		End()
 }

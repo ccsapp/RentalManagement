@@ -112,9 +112,36 @@ func (c controller) GetRentalStatus(ctx echo.Context, rentalId model.RentalIdPar
 	return ctx.JSON(http.StatusOK, *rental)
 }
 
-func (c controller) GrantTrunkAccess(echo.Context, model.RentalIdParam) error {
-	// TODO implement me
-	panic("implement me")
+func (c controller) GrantTrunkAccess(ctx echo.Context, rentalId model.RentalIdParam) error {
+	var timePeriod model.TimePeriod
+	// bind errors are unexpected because the timePeriod is validated by the Swagger spec
+	err := ctx.Bind(&timePeriod)
+	if err != nil {
+		return err
+	}
+
+	if isInvalidTimePeriod(timePeriod) {
+		return echo.NewHTTPError(http.StatusBadRequest, invalidTimePeriodMessage)
+	}
+
+	trunkAccess, err := c.operations.GrantTrunkAccess(ctx.Request().Context(), rentalId, timePeriod)
+	if errors.Is(err, rentalErrors.ErrRentalNotFound) {
+		return echo.NewHTTPError(http.StatusNotFound, "rental not found")
+	}
+	if errors.Is(err, rentalErrors.ErrRentalNotActive) {
+		return echo.NewHTTPError(http.StatusForbidden, "rental not active")
+	}
+	if errors.Is(err, rentalErrors.ErrRentalNotOverlapping) {
+		return echo.NewHTTPError(http.StatusForbidden, "rental not overlapping")
+	}
+	if errors.Is(err, rentalErrors.ErrResourceConflict) {
+		return echo.NewHTTPError(http.StatusServiceUnavailable, "failed to grant trunk access")
+	}
+	if err != nil {
+		return err
+	}
+
+	return ctx.JSON(http.StatusCreated, trunkAccess)
 }
 
 func isInvalidTimePeriod(timePeriod model.TimePeriod) bool {
