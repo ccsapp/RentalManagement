@@ -1018,3 +1018,150 @@ func (suite *ApiTestSuite) TestGrantTrunkAccess_unknownRentalId() {
 		Status(http.StatusNotFound).
 		End()
 }
+
+func returnsRental(expectedRental model.Rental, t *testing.T) func(*http.Response, *http.Request) error {
+	return func(res *http.Response, _ *http.Request) error {
+		defer func() { _ = res.Body.Close() }()
+
+		var rental model.Rental
+		if err := json.NewDecoder(res.Body).Decode(&rental); err != nil {
+			return err
+		}
+
+		rental.Id = ""
+
+		assert.Equal(t, expectedRental, rental)
+
+		return nil
+	}
+}
+
+func (suite *ApiTestSuite) TestGetNextRental_success_existsInFuture() {
+	suite.createRental(testdata.VinCar, testdata.TimePeriod2122)
+	suite.createRental(testdata.VinCar, testdata.TimePeriod2150)
+	suite.newApiTestWithCarMock().
+		Get("/cars/" + testdata.VinCar + "/rentalStatus").
+		Expect(suite.T()).
+		Status(http.StatusOK).
+		Assert(returnsRental(model.Rental{
+			State: model.UPCOMING,
+			RentalPeriod: model.TimePeriod{
+				EndDate:   time.Date(2123, 1, 1, 0, 0, 0, 0, time.UTC),
+				StartDate: time.Date(2122, 1, 1, 0, 0, 0, 0, time.UTC),
+			},
+			Customer: &model.Customer{
+				CustomerId: "d9ChwOvI",
+			},
+		}, suite.T())).
+		End()
+}
+
+func (suite *ApiTestSuite) TestGetNextRental_success_existsInPastAndFuture() {
+	now := time.Now().UTC().Round(time.Millisecond)
+	periodForPastRental := model.TimePeriod{
+		StartDate: now.Add(10 * time.Millisecond),
+		EndDate:   now.Add(12 * time.Millisecond),
+	}
+	marshalledPeriodForPastRental, _ := json.Marshal(periodForPastRental)
+
+	suite.createRental(testdata.VinCar, string(marshalledPeriodForPastRental))
+	suite.createRental(testdata.VinCar, testdata.TimePeriod2122)
+
+	time.Sleep(15*time.Millisecond - time.Since(now))
+
+	suite.newApiTestWithCarMock().
+		Get("/cars/" + testdata.VinCar + "/rentalStatus").
+		Expect(suite.T()).
+		Status(http.StatusOK).
+		Assert(returnsRental(model.Rental{
+			State: model.UPCOMING,
+			RentalPeriod: model.TimePeriod{
+				EndDate:   time.Date(2123, 1, 1, 0, 0, 0, 0, time.UTC),
+				StartDate: time.Date(2122, 1, 1, 0, 0, 0, 0, time.UTC),
+			},
+			Customer: &model.Customer{
+				CustomerId: "d9ChwOvI",
+			},
+		}, suite.T())).
+		End()
+}
+
+func (suite *ApiTestSuite) TestGetNextRental_success_existsNow() {
+	now := time.Now().UTC().Round(time.Millisecond)
+	periodForPastRental := model.TimePeriod{
+		StartDate: now.Add(10 * time.Millisecond),
+		EndDate:   now.Add(12 * time.Millisecond),
+	}
+	marshalledPeriodForPastRental, _ := json.Marshal(periodForPastRental)
+
+	suite.createRental(testdata.VinCar, string(marshalledPeriodForPastRental))
+
+	now = time.Now().UTC().Round(time.Millisecond)
+	periodFromNow := model.TimePeriod{
+		StartDate: now.Add(13 * time.Millisecond),
+		EndDate:   time.Date(2123, 1, 1, 0, 0, 0, 0, time.UTC),
+	}
+	marshalledPeriodFromNow, _ := json.Marshal(periodFromNow)
+
+	suite.createRental(testdata.VinCar, string(marshalledPeriodFromNow))
+
+	suite.createRental(testdata.VinCar, testdata.TimePeriod2150)
+
+	time.Sleep(15*time.Millisecond - time.Since(now))
+
+	suite.newApiTestWithCarMock().
+		Get("/cars/" + testdata.VinCar + "/rentalStatus").
+		Expect(suite.T()).
+		Status(http.StatusOK).
+		Assert(returnsRental(model.Rental{
+			State:        model.ACTIVE,
+			RentalPeriod: periodFromNow,
+			Customer: &model.Customer{
+				CustomerId: "d9ChwOvI",
+			},
+		}, suite.T())).
+		End()
+}
+
+func (suite *ApiTestSuite) TestGetNextRental_success_noRentalExists() {
+	suite.newApiTestWithCarMock().
+		Get("/cars/" + testdata.VinCar + "/rentalStatus").
+		Expect(suite.T()).
+		Status(http.StatusNoContent).
+		End()
+}
+
+func (suite *ApiTestSuite) TestGetNextRental_success_onlyRentalsInPast() {
+	now := time.Now().UTC().Round(time.Millisecond)
+	periodFromNow := model.TimePeriod{
+		StartDate: now.Add(10 * time.Millisecond),
+		EndDate:   now.Add(12 * time.Millisecond),
+	}
+	marshalledPeriodFromNow, _ := json.Marshal(periodFromNow)
+
+	suite.createRental(testdata.VinCar, string(marshalledPeriodFromNow))
+
+	time.Sleep(15*time.Millisecond - time.Since(now))
+
+	suite.newApiTestWithCarMock().
+		Get("/cars/" + testdata.VinCar + "/rentalStatus").
+		Expect(suite.T()).
+		Status(http.StatusNoContent).
+		End()
+}
+
+func (suite *ApiTestSuite) TestGetNextRental_invalidVin() {
+	suite.newApiTestWithCarMock().
+		Get("/cars/invalidVin/rentalStatus").
+		Expect(suite.T()).
+		Status(http.StatusBadRequest).
+		End()
+}
+
+func (suite *ApiTestSuite) TestGetNextRental_carDoesNotExist() {
+	suite.newApiTestWithCarMock().
+		Get("/cars/" + testdata.UnknownVin + "/rentalStatus").
+		Expect(suite.T()).
+		Status(http.StatusNotFound).
+		End()
+}
