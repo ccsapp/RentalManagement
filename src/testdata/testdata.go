@@ -23,11 +23,11 @@ var CarsAvailableFirst string
 //go:embed carsAvailableBoth.json
 var CarsAvailableBoth string
 
-//go:embed customerRental.json
-var CustomerRental string
+//go:embed customerRentalUpcoming.json
+var CustomerRentalUpcoming string
 
-//go:embed customerRentalInactive.json
-var CustomerRentalInactive string
+//go:embed customerRentalExpired.json
+var CustomerRentalExpired string
 
 //go:embed customerRentalActive.json
 var CustomerRentalActive string

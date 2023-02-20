@@ -174,7 +174,7 @@ func (o *operations) GetRentalStatus(ctx context.Context, rentalId model.RentalI
 	}
 
 	rentalReturn := rental.ToRentalCustomer()
-	if rentalReturn.Active {
+	if rentalReturn.State == model.ACTIVE {
 		rentalReturn.Car = car.MapToCar(carResponse.ParsedCar)
 	} else {
 		rentalReturn.Car = car.MapToCarStatic(carResponse.ParsedCar)

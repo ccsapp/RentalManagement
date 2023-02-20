@@ -346,7 +346,7 @@ func TestCrud_GetRentalsOfCustomer_success(t *testing.T) {
 	}
 
 	var rentalModel1 = model.Rental{
-		Active:   true,
+		State:    model.ACTIVE,
 		Car:      &model.Car{Vin: "WVWAA71K08W201030"},
 		Id:       "rZ6IIwcD",
 		Customer: &model.Customer{CustomerId: customerId},
@@ -358,7 +358,7 @@ func TestCrud_GetRentalsOfCustomer_success(t *testing.T) {
 	}
 
 	var rentalModel2 = model.Rental{
-		Active:   false,
+		State:    model.EXPIRED,
 		Car:      &model.Car{Vin: "AVWAA71K08W201031"},
 		Id:       "rZ6I8waD",
 		Customer: &model.Customer{CustomerId: customerId},
@@ -1439,7 +1439,7 @@ func TestCrud_GetRental_success(t *testing.T) {
 	}
 
 	var rental = model.Rental{
-		Active:   true,
+		State:    model.ACTIVE,
 		Car:      &model.Car{Vin: "WVWAA71K08W201030"},
 		Id:       rentalId,
 		Customer: &model.Customer{CustomerId: "jJ8mNg6Z"},

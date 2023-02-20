@@ -1,7 +1,10 @@
 {
   "id": "WillBeReplacedDynamicallyDuringTesting_RentalID",
-  "state": "ACTIVE",
-  "rentalPeriod": "WillBeReplacedDynamicallyDuringTesting_RentalPeriod",
+  "state": "UPCOMING",
+  "rentalPeriod": {
+    "startDate": "2122-01-01T00:00:00Z",
+    "endDate": "2123-01-01T00:00:00Z"
+  },
   "car": {
     "vin": "WVWAA71K08W201030",
     "brand": "Audi",
@@ -29,16 +32,6 @@
         "overland": 122,
         "combined": 137
       }
-    },
-    "dynamicData": {
-      "doorsLockState": "UNLOCKED",
-      "engineState": "OFF",
-      "fuelLevelPercentage": 23,
-      "position": {
-        "latitude": 49.0069,
-        "longitude": 8.4037
-      },
-      "trunkLockState": "UNLOCKED"
     }
   }
 }
