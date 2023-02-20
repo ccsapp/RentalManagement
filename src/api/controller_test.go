@@ -94,19 +94,19 @@ var carBase2 = model.Car{
 }
 
 var rentalCustomerShort1 = model.Rental{
-	Active: false,
-	Car:    &carBase1,
-	Id:     "M9hUnd8a",
+	State: model.EXPIRED,
+	Car:   &carBase1,
+	Id:    "M9hUnd8a",
 	RentalPeriod: model.TimePeriod{
-		EndDate:   time.Date(2023, 3, 2, 3, 0, 0, 0, time.UTC),
-		StartDate: time.Date(2023, 4, 3, 1, 0, 0, 0, time.UTC),
+		EndDate:   time.Date(1900, 3, 2, 3, 0, 0, 0, time.UTC),
+		StartDate: time.Date(1900, 4, 3, 1, 0, 0, 0, time.UTC),
 	},
 }
 
 var rentalCustomerShort2 = model.Rental{
-	Active: true,
-	Car:    &carBase2,
-	Id:     "P2zUdL3C",
+	State: model.ACTIVE,
+	Car:   &carBase2,
+	Id:    "P2zUdL3C",
 	RentalPeriod: model.TimePeriod{
 		EndDate:   time.Date(2023, 1, 2, 3, 0, 0, 0, time.UTC),
 		StartDate: time.Date(2023, 3, 3, 1, 0, 0, 0, time.UTC),

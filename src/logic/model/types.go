@@ -15,6 +15,13 @@ const (
 	UNLOCKED LockState = "UNLOCKED"
 )
 
+// Defines values for RentalState.
+const (
+	ACTIVE   State = "ACTIVE"
+	UPCOMING State = "UPCOMING"
+	EXPIRED  State = "EXPIRED"
+)
+
 // Defines values for TechnicalSpecificationFuel.
 const (
 	DIESEL       TechnicalSpecificationFuel = "DIESEL"
@@ -98,6 +105,9 @@ type DynamicDataEngineState string
 // LockState Data that specifies whether an object is locked or unlocked
 type LockState string
 
+// State Describes whether this rental is active, upcoming or expired
+type State string
+
 // LockStateObject An object containing the trunk lock state
 type LockStateObject struct {
 	// TrunkLockState Data that specifies whether an object is locked or unlocked
@@ -106,8 +116,8 @@ type LockStateObject struct {
 
 // Rental defines a model for rentals.
 type Rental struct {
-	// Active Describes whether this rental is active
-	Active bool `json:"active"`
+	// State Describes whether this rental is active, upcoming or expired
+	State State `json:"state"`
 
 	// Car The rented car
 	Car *Car `json:"car,omitempty"`

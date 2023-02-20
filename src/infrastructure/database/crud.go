@@ -203,7 +203,7 @@ func (c *crud) trySetTrunkToken(ctx context.Context, rentalId model.RentalId,
 	rentalEntity := cars[0].Rentals[0]
 	rentalModel := mappers.MapCarFromDbToRentals(&cars[0], c.timeProvider)[0]
 
-	if !rentalModel.Active {
+	if rentalModel.State != model.ACTIVE {
 		return nil, rentalErrors.ErrRentalNotActive
 	}
 

@@ -70,7 +70,7 @@ var rental3 = entities.Rental{
 }
 
 var rentalModel1Car1 = model.Rental{
-	Active:   true,
+	State:    model.ACTIVE,
 	Car:      &model.Car{Vin: "G1YZ23J9P58034278"},
 	Customer: &model.Customer{CustomerId: "M9hUnd8a"},
 	Id:       "rZ6IIwcD",
@@ -82,7 +82,7 @@ var rentalModel1Car1 = model.Rental{
 }
 
 var rentalModel2Car1 = model.Rental{
-	Active:   false,
+	State:    model.UPCOMING,
 	Car:      &model.Car{Vin: "G1YZ23J9P58034278"},
 	Customer: &model.Customer{CustomerId: "d9COw9vI"},
 	Id:       "8J7szB1d",
@@ -100,7 +100,7 @@ var rentalModel2Car1 = model.Rental{
 }
 
 var rentalModel3Car2 = model.Rental{
-	Active:   false,
+	State:    model.EXPIRED,
 	Car:      &model.Car{Vin: "1GKLVNED8AJ200101"},
 	Customer: &model.Customer{CustomerId: "nM8nB6Zu"},
 	Id:       "u8NbZuNa",

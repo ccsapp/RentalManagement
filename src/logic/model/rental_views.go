@@ -1,9 +1,9 @@
 package model
 
-// ToRentalCustomer selects Active, Car, Id, RentalPeriod and Token. Customer is omitted.
+// ToRentalCustomer selects State, Car, Id, RentalPeriod and Token. Customer is omitted.
 func (r *Rental) ToRentalCustomer() Rental {
 	return Rental{
-		Active:       r.Active,
+		State:        r.State,
 		Car:          r.Car,
 		Id:           r.Id,
 		Customer:     nil,
@@ -12,10 +12,10 @@ func (r *Rental) ToRentalCustomer() Rental {
 	}
 }
 
-// ToRentalCustomerShort selects Active, Car, Id and RentalPeriod. Customer and Token are omitted.
+// ToRentalCustomerShort selects State, Car, Id and RentalPeriod. Customer and Token are omitted.
 func (r *Rental) ToRentalCustomerShort() Rental {
 	return Rental{
-		Active:       r.Active,
+		State:        r.State,
 		Car:          r.Car,
 		Id:           r.Id,
 		Customer:     nil,
@@ -24,10 +24,10 @@ func (r *Rental) ToRentalCustomerShort() Rental {
 	}
 }
 
-// ToRentalFleetManager selects Active, Id, Customer and RentalPeriod. Car and Token are omitted.
+// ToRentalFleetManager selects State, Id, Customer and RentalPeriod. Car and Token are omitted.
 func (r *Rental) ToRentalFleetManager() Rental {
 	return Rental{
-		Active:       r.Active,
+		State:        r.State,
 		Car:          nil,
 		Id:           r.Id,
 		Customer:     r.Customer,

@@ -446,7 +446,16 @@ func (suite *ApiTestSuite) TestGetRentalOverview_success_noRentals() {
 }
 
 func (suite *ApiTestSuite) TestGetRentalOverview_success_oneRental() {
-	suite.createRentalForCustomer(testdata.VinCar, testdata.TimePeriod2122, "d9ChwOvI")
+	now := time.Now().UTC().Round(time.Millisecond)
+
+	timePeriodFuture := model.TimePeriod{
+		StartDate: now.Add(10 * time.Hour),
+		EndDate:   now.Add(12 * time.Hour),
+	}
+
+	marshalledPeriodFromFuture, _ := json.Marshal(timePeriodFuture)
+
+	suite.createRentalForCustomer(testdata.VinCar, string(marshalledPeriodFromFuture), "d9ChwOvI")
 	suite.createRentalForCustomer(testdata.VinCar, testdata.TimePeriod2150, "aDfd3Dae")
 	suite.newApiTestWithCarMock().
 		Get("/rentals").
@@ -455,24 +464,43 @@ func (suite *ApiTestSuite) TestGetRentalOverview_success_oneRental() {
 		Status(http.StatusOK).
 		Assert(returnsRentalArray([]model.Rental{
 			{
-				Active: false,
+				State: model.UPCOMING,
 				Car: &model.Car{
 					Brand: "Audi",
 					Model: "A3",
 					Vin:   "WVWAA71K08W201030",
 				},
-				RentalPeriod: model.TimePeriod{
-					EndDate:   time.Date(2123, 01, 01, 0, 0, 0, 0, time.UTC),
-					StartDate: time.Date(2122, 01, 01, 0, 0, 0, 0, time.UTC),
-				},
+				RentalPeriod: timePeriodFuture,
 			}}, suite.T())).
 		End()
 }
 
 func (suite *ApiTestSuite) TestGetRentalOverview_success_twoRentals() {
-	suite.createRentalForCustomer(testdata.VinCar, testdata.TimePeriod2122, "d9ChwOvI")
+	now := time.Now().UTC().Round(time.Millisecond)
+
+	timePeriod1 := model.TimePeriod{
+		StartDate: now.Add(10 * time.Millisecond),
+		EndDate:   now.Add(12 * time.Hour),
+	}
+
+	marshalledPeriod1, _ := json.Marshal(timePeriod1)
+
+	suite.createRentalForCustomer(testdata.VinCar, string(marshalledPeriod1), "d9ChwOvI")
 	suite.createRentalForCustomer(testdata.VinCar, testdata.TimePeriod2150, "aDfd3Dae")
-	suite.createRentalForCustomer(testdata.VinCar2, testdata.TimePeriod2150, "d9ChwOvI")
+
+	now = time.Now().UTC().Round(time.Millisecond)
+
+	timePeriod2 := model.TimePeriod{
+		StartDate: now.Add(10 * time.Millisecond),
+		EndDate:   now.Add(12 * time.Hour),
+	}
+
+	marshalledPeriod2, _ := json.Marshal(timePeriod2)
+
+	suite.createRentalForCustomer(testdata.VinCar2, string(marshalledPeriod2), "d9ChwOvI")
+
+	time.Sleep(15*time.Millisecond - time.Since(now))
+
 	suite.newApiTestWithCarMock().
 		Get("/rentals").
 		Query("customerId", "d9ChwOvI").
@@ -480,28 +508,22 @@ func (suite *ApiTestSuite) TestGetRentalOverview_success_twoRentals() {
 		Status(http.StatusOK).
 		Assert(returnsRentalArray([]model.Rental{
 			{
-				Active: false,
+				State: model.ACTIVE,
 				Car: &model.Car{
 					Brand: "Audi",
 					Model: "A3",
 					Vin:   "WVWAA71K08W201030",
 				},
-				RentalPeriod: model.TimePeriod{
-					EndDate:   time.Date(2123, 01, 01, 0, 0, 0, 0, time.UTC),
-					StartDate: time.Date(2122, 01, 01, 0, 0, 0, 0, time.UTC),
-				},
+				RentalPeriod: timePeriod1,
 			},
 			{
-				Active: false,
+				State: model.ACTIVE,
 				Car: &model.Car{
 					Brand: "Mercedes",
 					Model: "B4",
 					Vin:   "1FVNY5Y90HP312888",
 				},
-				RentalPeriod: model.TimePeriod{
-					EndDate:   time.Date(2151, 01, 01, 0, 0, 0, 0, time.UTC),
-					StartDate: time.Date(2150, 01, 01, 0, 0, 0, 0, time.UTC),
-				},
+				RentalPeriod: timePeriod2,
 			}}, suite.T())).
 		End()
 }
@@ -530,6 +552,38 @@ func returnsRentalArray(expectedRentals []model.Rental, t *testing.T) func(res *
 	}
 }
 
+func (suite *ApiTestSuite) TestGetRentalOverview_expiredRental() {
+	now := time.Now().UTC().Round(time.Millisecond)
+
+	timePeriodExpired := model.TimePeriod{
+		StartDate: now.Add(10 * time.Millisecond).UTC().Round(time.Millisecond),
+		EndDate:   now.Add(15 * time.Millisecond).UTC().Round(time.Millisecond),
+	}
+
+	marshalledPeriodExpired, _ := json.Marshal(timePeriodExpired)
+
+	suite.createRentalForCustomer(testdata.VinCar, string(marshalledPeriodExpired), "d9ChwOvI")
+
+	time.Sleep(15 * time.Millisecond)
+
+	suite.newApiTestWithCarMock().
+		Get("/rentals").
+		Query("customerId", "d9ChwOvI").
+		Expect(suite.T()).
+		Status(http.StatusOK).
+		Assert(returnsRentalArray([]model.Rental{
+			{
+				State: model.EXPIRED,
+				Car: &model.Car{
+					Brand: "Audi",
+					Model: "A3",
+					Vin:   "WVWAA71K08W201030",
+				},
+				RentalPeriod: timePeriodExpired,
+			}}, suite.T())).
+		End()
+}
+
 func (suite *ApiTestSuite) TestGetRentalOverview_invalidCustomerId() {
 	suite.newApiTestWithCarMock().
 		Get("/rentals").
@@ -547,7 +601,7 @@ func (suite *ApiTestSuite) TestGetRentalOverview_missingCustomerId() {
 		End()
 }
 
-func (suite *ApiTestSuite) TestGetRentalStatus_success_inactiveRental() {
+func (suite *ApiTestSuite) TestGetRentalStatus_success_upcomingRental() {
 	suite.createRentalForCustomer(testdata.VinCar, testdata.TimePeriod2122, "d9ChwOvI")
 
 	rentalId := suite.getRentalOverview("d9ChwOvI")[0].Id
@@ -557,21 +611,49 @@ func (suite *ApiTestSuite) TestGetRentalStatus_success_inactiveRental() {
 		Expect(suite.T()).
 		Status(http.StatusOK).
 		Body(strings.Replace(
-			testdata.CustomerRentalInactive, "WillBeReplacedDynamicallyDuringTesting_RentalID", rentalId, 1)).
+			testdata.CustomerRentalUpcoming, "WillBeReplacedDynamicallyDuringTesting_RentalID", rentalId, 1)).
 		End()
 }
 
-func (suite *ApiTestSuite) TestGetRentalStatus_success_activeRental() {
+func (suite *ApiTestSuite) TestGetRentalStatus_success_expiredRental() {
 	periodFromNow := model.TimePeriod{
 		StartDate: time.Now().Add(10 * time.Millisecond).UTC().Round(time.Millisecond),
-		EndDate:   time.Date(2123, 1, 1, 0, 0, 0, 0, time.UTC),
+		EndDate:   time.Now().Add(15 * time.Millisecond).UTC().Round(time.Millisecond),
 	}
 
 	marshalledPeriodFromNow, _ := json.Marshal(periodFromNow)
 
 	suite.createRentalForCustomer(testdata.VinCar, string(marshalledPeriodFromNow), "d9ChwOvI")
 
-	time.Sleep(10 * time.Millisecond)
+	time.Sleep(15 * time.Millisecond)
+
+	rentalId := suite.getRentalOverview("d9ChwOvI")[0].Id
+
+	expectedRental := strings.Replace(
+		testdata.CustomerRentalExpired, "\"WillBeReplacedDynamicallyDuringTesting_RentalPeriod\"",
+		string(marshalledPeriodFromNow), 1)
+	expectedRental = strings.Replace(
+		expectedRental, "WillBeReplacedDynamicallyDuringTesting_RentalID", rentalId, 1)
+
+	suite.newApiTestWithCarMock().
+		Get("/rentals/" + rentalId).
+		Expect(suite.T()).
+		Status(http.StatusOK).
+		Body(expectedRental).
+		End()
+}
+
+func (suite *ApiTestSuite) TestGetRentalStatus_success_activeRental() {
+	periodFromNow := model.TimePeriod{
+		StartDate: time.Now().Add(10 * time.Millisecond).UTC().Round(time.Millisecond),
+		EndDate:   time.Now().Add(10 * time.Hour).UTC().Round(time.Millisecond),
+	}
+
+	marshalledPeriodFromNow, _ := json.Marshal(periodFromNow)
+
+	suite.createRentalForCustomer(testdata.VinCar, string(marshalledPeriodFromNow), "d9ChwOvI")
+
+	time.Sleep(15 * time.Millisecond)
 
 	rentalId := suite.getRentalOverview("d9ChwOvI")[0].Id
 
@@ -649,7 +731,7 @@ func (suite *ApiTestSuite) TestGrantTrunkAccess_success_match() {
 	assert.Equal(suite.T(), timePeriod, rental.Token.ValidityPeriod)
 	assert.Equal(suite.T(), 24, len(rental.Token.Token))
 	assert.Equal(suite.T(), rentalBefore.Car, rental.Car)
-	assert.Equal(suite.T(), rentalBefore.Active, rental.Active)
+	assert.Equal(suite.T(), rentalBefore.State, rental.State)
 	assert.Equal(suite.T(), rentalBefore.RentalPeriod, rental.RentalPeriod)
 }
 
@@ -749,7 +831,7 @@ func (suite *ApiTestSuite) TestGrantTrunkAccess_success_outside() {
 	assert.Equal(suite.T(), timePeriod, rental.Token.ValidityPeriod)
 	assert.Equal(suite.T(), 24, len(rental.Token.Token))
 	assert.Equal(suite.T(), rentalBefore.Car, rental.Car)
-	assert.Equal(suite.T(), rentalBefore.Active, rental.Active)
+	assert.Equal(suite.T(), rentalBefore.State, rental.State)
 	assert.Equal(suite.T(), rentalBefore.RentalPeriod, rental.RentalPeriod)
 }
 
@@ -848,7 +930,7 @@ func (suite *ApiTestSuite) TestGrantTrunkAccess_missingTimePeriod() {
 		End()
 }
 
-func (suite *ApiTestSuite) TestGrantTrunkAccess_notActiveFuture() {
+func (suite *ApiTestSuite) TestGrantTrunkAccess_upcoming() {
 	suite.createRentalForCustomer(testdata.VinCar, testdata.TimePeriod2122, "customer")
 
 	rentalId := suite.getRentalOverview("customer")[0].Id
@@ -861,7 +943,7 @@ func (suite *ApiTestSuite) TestGrantTrunkAccess_notActiveFuture() {
 		End()
 }
 
-func (suite *ApiTestSuite) TestGrantTrunkAccess_notActivePast() {
+func (suite *ApiTestSuite) TestGrantTrunkAccess_expired() {
 	now := time.Now().UTC().Round(time.Millisecond)
 	timePeriod := model.TimePeriod{
 		StartDate: now.Add(10 * time.Millisecond),

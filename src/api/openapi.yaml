@@ -224,13 +224,13 @@ components:
       type: object
       required:
         - id
-        - active
+        - state
         - rentalPeriod
       properties:
         id:
           $ref: '#/components/schemas/rentalId'
-        active:
-          $ref: '#/components/schemas/active'
+        state:
+          $ref: '#/components/schemas/rentalState'
         rentalPeriod:
           $ref: '#/components/schemas/timePeriod'
     rentalCustomerShort:
@@ -523,10 +523,14 @@ components:
           $ref: '#/components/schemas/date-time'
         endDate:
           $ref: '#/components/schemas/date-time'
-    active:
-      type: boolean
-      example: true
-      description: Describes whether this rental is active
+    rentalState:
+      type: string
+      enum:
+        - ACTIVE
+        - UPCOMING
+        - EXPIRED
+      example: ACTIVE
+      description: Describes the state of a rental e.g. if it is active, upcoming or expired
     lockStateObject:
       type: object
       required:

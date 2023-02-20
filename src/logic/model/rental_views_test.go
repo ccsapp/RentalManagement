@@ -7,7 +7,7 @@ import (
 )
 
 var rental = Rental{
-	Active:   true,
+	State:    ACTIVE,
 	Car:      &Car{Vin: "G1YZ23J9P58034280"},
 	Customer: &Customer{CustomerId: "d9COwOvI"},
 	Id:       "rZ6I3weD",
@@ -25,9 +25,9 @@ var rental = Rental{
 }
 
 var rentalCustomer = Rental{
-	Active: true,
-	Car:    &Car{Vin: "G1YZ23J9P58034280"},
-	Id:     "rZ6I3weD",
+	State: ACTIVE,
+	Car:   &Car{Vin: "G1YZ23J9P58034280"},
+	Id:    "rZ6I3weD",
 	RentalPeriod: TimePeriod{
 		StartDate: time.Date(2023, 2, 10, 0, 0, 0, 0, time.UTC),
 		EndDate:   time.Date(2023, 2, 11, 0, 0, 0, 0, time.UTC),
@@ -42,9 +42,9 @@ var rentalCustomer = Rental{
 }
 
 var rentalCustomerShort = Rental{
-	Active: true,
-	Car:    &Car{Vin: "G1YZ23J9P58034280"},
-	Id:     "rZ6I3weD",
+	State: ACTIVE,
+	Car:   &Car{Vin: "G1YZ23J9P58034280"},
+	Id:    "rZ6I3weD",
 	RentalPeriod: TimePeriod{
 		StartDate: time.Date(2023, 2, 10, 0, 0, 0, 0, time.UTC),
 		EndDate:   time.Date(2023, 2, 11, 0, 0, 0, 0, time.UTC),
@@ -52,7 +52,7 @@ var rentalCustomerShort = Rental{
 }
 
 var rentalFleetManager = Rental{
-	Active:   true,
+	State:    ACTIVE,
 	Customer: &Customer{CustomerId: "d9COwOvI"},
 	Id:       "rZ6I3weD",
 	RentalPeriod: TimePeriod{

@@ -49,14 +49,20 @@ func MapTokenToDb(token *model.TrunkAccess) *entities.TrunkAccessToken {
 	}
 }
 
-func isActive(period *entities.TimePeriod, currentTime time.Time) bool {
-	return period.StartDate.Before(currentTime) && period.EndDate.After(currentTime)
+func getState(period *entities.TimePeriod, currentTime time.Time) model.State {
+	if !period.StartDate.Before(currentTime) {
+		return model.UPCOMING
+	}
+	if period.EndDate.After(currentTime) {
+		return model.ACTIVE
+	}
+	return model.EXPIRED
 }
 
 // mapRentalFromDb only sets the VIN of the car
 func mapRentalFromDb(rental *entities.Rental, vin model.Vin, timeProvider util.ITimeProvider) model.Rental {
 	return model.Rental{
-		Active:       isActive(&rental.RentalPeriod, timeProvider.Now()),
+		State:        getState(&rental.RentalPeriod, timeProvider.Now()),
 		Car:          &model.Car{Vin: vin},
 		Customer:     &model.Customer{CustomerId: rental.CustomerId},
 		Id:           rental.RentalId,

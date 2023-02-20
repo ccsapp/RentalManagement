@@ -1,10 +1,7 @@
 {
   "id": "WillBeReplacedDynamicallyDuringTesting_RentalID",
-  "active": false,
-  "rentalPeriod": {
-    "startDate": "2122-01-01T00:00:00Z",
-    "endDate": "2123-01-01T00:00:00Z"
-  },
+  "state": "EXPIRED",
+  "rentalPeriod": "WillBeReplacedDynamicallyDuringTesting_RentalPeriod",
   "car": {
     "vin": "WVWAA71K08W201030",
     "brand": "Audi",

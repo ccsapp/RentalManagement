@@ -80,7 +80,7 @@ var domainCar = carTypes.Car{
 }
 
 var rentalCrud = model.Rental{
-	Active:   true,
+	State:    model.ACTIVE,
 	Car:      &model.Car{Vin: domainCar.Vin},
 	Customer: &model.Customer{CustomerId: exampleCustomerID},
 	Id:       "rZ6IIwcD",
@@ -97,14 +97,32 @@ var rentalCrud = model.Rental{
 	},
 }
 
-var rentalCrudInactive = model.Rental{
-	Active:   false,
+var rentalCrudExpired = model.Rental{
+	State:    model.EXPIRED,
 	Car:      &model.Car{Vin: domainCar.Vin},
 	Customer: &model.Customer{CustomerId: exampleCustomerID},
 	Id:       "rZ6IIwcD",
 	RentalPeriod: model.TimePeriod{
-		EndDate:   time.Date(2023, 4, 2, 3, 0, 0, 0, time.UTC),
-		StartDate: time.Date(2023, 3, 3, 1, 0, 0, 0, time.UTC),
+		EndDate:   time.Date(1900, 4, 2, 3, 0, 0, 0, time.UTC),
+		StartDate: time.Date(1900, 3, 3, 1, 0, 0, 0, time.UTC),
+	},
+	Token: &model.TrunkAccess{
+		Token: "bumrLuCMbumrLuCMbumrLuCM",
+		ValidityPeriod: model.TimePeriod{
+			EndDate:   time.Date(2023, 3, 3, 1, 0, 0, 0, time.UTC),
+			StartDate: time.Date(2023, 3, 2, 3, 0, 0, 0, time.UTC),
+		},
+	},
+}
+
+var rentalCrudUpcoming = model.Rental{
+	State:    model.UPCOMING,
+	Car:      &model.Car{Vin: domainCar.Vin},
+	Customer: &model.Customer{CustomerId: exampleCustomerID},
+	Id:       "rZ6IIwcD",
+	RentalPeriod: model.TimePeriod{
+		EndDate:   time.Date(1900, 4, 2, 3, 0, 0, 0, time.UTC),
+		StartDate: time.Date(1900, 3, 3, 1, 0, 0, 0, time.UTC),
 	},
 	Token: &model.TrunkAccess{
 		Token: "bumrLuCMbumrLuCMbumrLuCM",
@@ -116,9 +134,9 @@ var rentalCrudInactive = model.Rental{
 }
 
 var rentalCustomerShort = model.Rental{
-	Active: true,
-	Car:    &model.Car{Vin: domainCar.Vin, Brand: "Tesla", Model: "Model X"},
-	Id:     "rZ6IIwcD",
+	State: model.ACTIVE,
+	Car:   &model.Car{Vin: domainCar.Vin, Brand: "Tesla", Model: "Model X"},
+	Id:    "rZ6IIwcD",
 	RentalPeriod: model.TimePeriod{
 		EndDate:   time.Date(2023, 4, 2, 3, 0, 0, 0, time.UTC),
 		StartDate: time.Date(2023, 3, 3, 1, 0, 0, 0, time.UTC),
@@ -126,7 +144,7 @@ var rentalCustomerShort = model.Rental{
 }
 
 var rentalCustomerActive = model.Rental{
-	Active: true,
+	State: model.ACTIVE,
 	Car: &model.Car{
 		Brand: "Tesla",
 		DynamicData: &model.DynamicData{
@@ -180,8 +198,8 @@ var rentalCustomerActive = model.Rental{
 	},
 }
 
-var rentalCustomerNotActive = model.Rental{
-	Active: false,
+var rentalCustomerExpired = model.Rental{
+	State: model.EXPIRED,
 	Car: &model.Car{
 		Brand: "Tesla",
 		Model: "Model X",
@@ -213,8 +231,53 @@ var rentalCustomerNotActive = model.Rental{
 	},
 	Id: "rZ6IIwcD",
 	RentalPeriod: model.TimePeriod{
-		EndDate:   time.Date(2023, 4, 2, 3, 0, 0, 0, time.UTC),
-		StartDate: time.Date(2023, 3, 3, 1, 0, 0, 0, time.UTC),
+		EndDate:   time.Date(1900, 4, 2, 3, 0, 0, 0, time.UTC),
+		StartDate: time.Date(1900, 3, 3, 1, 0, 0, 0, time.UTC),
+	},
+	Token: &model.TrunkAccess{
+		Token: "bumrLuCMbumrLuCMbumrLuCM",
+		ValidityPeriod: model.TimePeriod{
+			EndDate:   time.Date(2023, 3, 3, 1, 0, 0, 0, time.UTC),
+			StartDate: time.Date(2023, 3, 2, 3, 0, 0, 0, time.UTC),
+		},
+	},
+}
+
+var rentalCustomerUpcoming = model.Rental{
+	State: model.UPCOMING,
+	Car: &model.Car{
+		Brand: "Tesla",
+		Model: "Model X",
+		TechnicalSpecification: &model.TechnicalSpecification{
+			Color: "black",
+			Consumption: carTypes.TechnicalSpecificationConsumption{
+				City:     10,
+				Combined: 12,
+				Overland: 13,
+			},
+			Emissions: carTypes.TechnicalSpecificationEmissions{
+				City:     17,
+				Combined: 18,
+				Overland: 19,
+			},
+			Engine: carTypes.TechnicalSpecificationEngine{
+				Power: 25,
+				Type:  "180 CDI",
+			},
+			Fuel:          model.HYBRIDDIESEL,
+			FuelCapacity:  "54.0L;85.2kWh",
+			NumberOfDoors: 4,
+			NumberOfSeats: 5,
+			Transmission:  model.MANUAL,
+			TrunkVolume:   1000,
+			Weight:        2000,
+		},
+		Vin: vin2,
+	},
+	Id: "rZ6IIwcD",
+	RentalPeriod: model.TimePeriod{
+		EndDate:   time.Date(1900, 4, 2, 3, 0, 0, 0, time.UTC),
+		StartDate: time.Date(1900, 3, 3, 1, 0, 0, 0, time.UTC),
 	},
 	Token: &model.TrunkAccess{
 		Token: "bumrLuCMbumrLuCMbumrLuCM",
@@ -582,7 +645,7 @@ func TestOperations_GetRentalStatus_success_active(t *testing.T) {
 	assert.Equal(t, &rentalCustomerActive, rental)
 }
 
-func TestOperations_GetRentalStatus_success_notActive(t *testing.T) {
+func TestOperations_GetRentalStatus_success_Expired(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 
@@ -592,13 +655,32 @@ func TestOperations_GetRentalStatus_success_notActive(t *testing.T) {
 	mockCar.EXPECT().GetCarWithResponse(ctx, vin2).Return(&car.GetCarResponse{ParsedCar: &domainCar}, nil)
 
 	mockCrud := mocks.NewMockICRUD(ctrl)
-	mockCrud.EXPECT().GetRental(ctx, rentalCrud.Id).Return(&rentalCrudInactive, nil)
+	mockCrud.EXPECT().GetRental(ctx, rentalCrud.Id).Return(&rentalCrudExpired, nil)
 
 	operations := NewOperations(mockCar, mockCrud)
 	rental, err := operations.GetRentalStatus(ctx, rentalCrud.Id)
 
 	assert.Nil(t, err)
-	assert.Equal(t, &rentalCustomerNotActive, rental)
+	assert.Equal(t, &rentalCustomerExpired, rental)
+}
+
+func TestOperations_GetRentalStatus_success_Upcoming(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	ctx := context.Background()
+
+	mockCar := mocks.NewMockClientWithResponsesInterface(ctrl)
+	mockCar.EXPECT().GetCarWithResponse(ctx, vin2).Return(&car.GetCarResponse{ParsedCar: &domainCar}, nil)
+
+	mockCrud := mocks.NewMockICRUD(ctrl)
+	mockCrud.EXPECT().GetRental(ctx, rentalCrud.Id).Return(&rentalCrudUpcoming, nil)
+
+	operations := NewOperations(mockCar, mockCrud)
+	rental, err := operations.GetRentalStatus(ctx, rentalCrud.Id)
+
+	assert.Nil(t, err)
+	assert.Equal(t, &rentalCustomerUpcoming, rental)
 }
 
 func TestOperations_GetRentalStatus_crudError(t *testing.T) {
@@ -749,7 +831,26 @@ func TestOperations_GrantTrunkAccess_unexpectedCrudError(t *testing.T) {
 	assert.Nil(t, trunkAccess)
 }
 
-func TestOperations_GrantTrunkAccess_rentalNotActive(t *testing.T) {
+func TestOperations_GrantTrunkAccess_rentalExpired(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	ctx := context.Background()
+
+	mockCar := mocks.NewMockClientWithResponsesInterface(ctrl)
+
+	mockCrud := mocks.NewMockICRUD(ctrl)
+	mockCrud.EXPECT().SetTrunkToken(ctx, "rentalId", gomock.Any()).
+		Return(nil, rentalErrors.ErrRentalNotActive)
+
+	operations := NewOperations(mockCar, mockCrud)
+	trunkAccess, err := operations.GrantTrunkAccess(ctx, "rentalId", timePeriod)
+
+	assert.ErrorIs(t, err, rentalErrors.ErrRentalNotActive)
+	assert.Nil(t, trunkAccess)
+}
+
+func TestOperations_GrantTrunkAccess_rentalUpcoming(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 
