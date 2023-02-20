@@ -1532,3 +1532,139 @@ func TestCrud_GetRental_databaseError(t *testing.T) {
 	assert.ErrorIs(t, err, dbError)
 	assert.Nil(t, returnedRental)
 }
+
+func TestCrud_GetNextRental_success_exists(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	ctx := context.Background()
+	factory := db.PseudoFactory{}
+
+	exampleCar := entities.Car{
+		Vin: "WVWAA71K08W201030",
+		Rentals: []entities.Rental{
+			{
+				RentalId:   "rZ6IIwcD",
+				CustomerId: "jJ8mNg6Z",
+				RentalPeriod: entities.TimePeriod{
+					EndDate:   time.Date(2023, 4, 3, 1, 0, 0, 0, time.UTC),
+					StartDate: time.Date(2023, 3, 2, 3, 0, 0, 0, time.UTC),
+				},
+				TrunkToken: nil,
+			},
+		},
+	}
+	var cars = []entities.Car{exampleCar}
+	exampleRental := model.Rental{
+		State:    model.ACTIVE,
+		Car:      &model.Car{Vin: "WVWAA71K08W201030"},
+		Id:       "rZ6IIwcD",
+		Customer: &model.Customer{CustomerId: "jJ8mNg6Z"},
+		RentalPeriod: model.TimePeriod{
+			EndDate:   time.Date(2023, 4, 3, 1, 0, 0, 0, time.UTC),
+			StartDate: time.Date(2023, 3, 2, 3, 0, 0, 0, time.UTC),
+		},
+		Token: nil,
+	}
+	currentDate := time.Date(2023, 4, 1, 0, 0, 0, 0, time.UTC)
+
+	mockConnection := mocks.NewMockIConnection(ctrl)
+	mockTimeProvider := mocks.NewMockITimeProvider(ctrl)
+
+	mockConnection.EXPECT().GetFactory().Return(&factory)
+	mockTimeProvider.EXPECT().Now().Return(currentDate)
+	mockConnection.EXPECT().Aggregate(
+		ctx,
+		collectionPrefix+CollectionBaseName,
+		factory.ArrayFilterAggregation(
+			"rentals",
+			factory.FilterAnd(
+				factory.FilterEqual("_id", "WVWAA71K08W201030"),
+				factory.FilterGreater("rentals.rentalPeriod.endDate", currentDate),
+			),
+			1,
+			factory.SortAsc("rentals.rentalPeriod.startDate"),
+		),
+		gomock.Any(),
+	).SetArg(3, cars).Return(nil)
+	mockTimeProvider.EXPECT().Now().Return(currentDate)
+
+	crud := NewICRUD(mockConnection, dbConfig, mockTimeProvider)
+	returnedRental, err := crud.GetNextRental(ctx, "WVWAA71K08W201030")
+
+	assert.Nil(t, err)
+	assert.Equal(t, &exampleRental, returnedRental)
+}
+
+func TestCrud_GetNextRental_success_notExists(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	ctx := context.Background()
+	factory := db.PseudoFactory{}
+
+	currentDate := time.Date(2023, 4, 1, 0, 0, 0, 0, time.UTC)
+
+	mockConnection := mocks.NewMockIConnection(ctrl)
+	mockTimeProvider := mocks.NewMockITimeProvider(ctrl)
+
+	mockConnection.EXPECT().GetFactory().Return(&factory)
+	mockTimeProvider.EXPECT().Now().Return(currentDate)
+	mockConnection.EXPECT().Aggregate(
+		ctx,
+		collectionPrefix+CollectionBaseName,
+		factory.ArrayFilterAggregation(
+			"rentals",
+			factory.FilterAnd(
+				factory.FilterEqual("_id", "WVWAA71K08W201030"),
+				factory.FilterGreater("rentals.rentalPeriod.endDate", currentDate),
+			),
+			1,
+			factory.SortAsc("rentals.rentalPeriod.startDate"),
+		),
+		gomock.Any(),
+	).SetArg(3, []entities.Car{}).Return(nil)
+
+	crud := NewICRUD(mockConnection, dbConfig, mockTimeProvider)
+	returnedRental, err := crud.GetNextRental(ctx, "WVWAA71K08W201030")
+
+	assert.Nil(t, err)
+	assert.Nil(t, returnedRental)
+}
+
+func TestCrud_GetNextRental_databaseError(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	ctx := context.Background()
+	factory := db.PseudoFactory{}
+	dbError := errors.New("db error")
+
+	currentDate := time.Date(2023, 4, 1, 0, 0, 0, 0, time.UTC)
+
+	mockConnection := mocks.NewMockIConnection(ctrl)
+	mockTimeProvider := mocks.NewMockITimeProvider(ctrl)
+
+	mockConnection.EXPECT().GetFactory().Return(&factory)
+	mockTimeProvider.EXPECT().Now().Return(currentDate)
+	mockConnection.EXPECT().Aggregate(
+		ctx,
+		collectionPrefix+CollectionBaseName,
+		factory.ArrayFilterAggregation(
+			"rentals",
+			factory.FilterAnd(
+				factory.FilterEqual("_id", "WVWAA71K08W201030"),
+				factory.FilterGreater("rentals.rentalPeriod.endDate", currentDate),
+			),
+			1,
+			factory.SortAsc("rentals.rentalPeriod.startDate"),
+		),
+		gomock.Any(),
+	).Return(dbError)
+
+	crud := NewICRUD(mockConnection, dbConfig, mockTimeProvider)
+	returnedRental, err := crud.GetNextRental(ctx, "WVWAA71K08W201030")
+
+	assert.ErrorIs(t, err, dbError)
+	assert.Nil(t, returnedRental)
+}

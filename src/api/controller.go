@@ -50,9 +50,18 @@ func (c controller) GetCar(ctx echo.Context, vin model.VinParam) error {
 	return ctx.JSON(http.StatusOK, car)
 }
 
-func (c controller) GetNextRental(echo.Context, model.VinParam) error {
-	// TODO implement me
-	panic("implement me")
+func (c controller) GetNextRental(ctx echo.Context, vin model.VinParam) error {
+	rental, err := c.operations.GetNextRental(ctx.Request().Context(), vin)
+	if errors.Is(err, rentalErrors.ErrCarNotFound) {
+		return echo.NewHTTPError(http.StatusNotFound, carNotFoundMessage)
+	}
+	if err != nil {
+		return err
+	}
+	if rental == nil {
+		return ctx.NoContent(http.StatusNoContent)
+	}
+	return ctx.JSON(http.StatusOK, rental)
 }
 
 func (c controller) CreateRental(ctx echo.Context, vin model.VinParam, params model.CreateRentalParams) error {

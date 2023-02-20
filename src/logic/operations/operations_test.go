@@ -288,6 +288,16 @@ var rentalCustomerUpcoming = model.Rental{
 	},
 }
 
+var rentalFleetManager = model.Rental{
+	State:    model.ACTIVE,
+	Customer: &model.Customer{CustomerId: exampleCustomerID},
+	Id:       "rZ6IIwcD",
+	RentalPeriod: model.TimePeriod{
+		EndDate:   time.Date(2023, 4, 2, 3, 0, 0, 0, time.UTC),
+		StartDate: time.Date(2023, 3, 3, 1, 0, 0, 0, time.UTC),
+	},
+}
+
 var staticCar = model.Car{
 	Brand: "Tesla",
 	Model: "Model X",
@@ -519,6 +529,108 @@ func TestOperations_GetCar_carNotFound(t *testing.T) {
 
 	assert.ErrorIs(t, err, rentalErrors.ErrCarNotFound)
 	assert.Nil(t, retCar)
+}
+
+func TestOperations_GetNextRental_success(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	ctx := context.Background()
+
+	mockCar := mocks.NewMockClientWithResponsesInterface(ctrl)
+	mockCrud := mocks.NewMockICRUD(ctrl)
+
+	mockCar.EXPECT().GetCarWithResponse(ctx, vin1).Return(&car.GetCarResponse{ParsedCar: &domainCar}, nil)
+	mockCrud.EXPECT().GetNextRental(ctx, vin1).Return(&rentalCrud, nil)
+
+	operations := NewOperations(mockCar, mockCrud)
+	retRental, err := operations.GetNextRental(ctx, vin1)
+
+	assert.Nil(t, err)
+	assert.Equal(t, &rentalFleetManager, retRental)
+}
+
+func TestOperations_GetNextRental_noRental(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	ctx := context.Background()
+
+	mockCar := mocks.NewMockClientWithResponsesInterface(ctrl)
+	mockCrud := mocks.NewMockICRUD(ctrl)
+
+	mockCar.EXPECT().GetCarWithResponse(ctx, vin1).Return(&car.GetCarResponse{ParsedCar: &domainCar}, nil)
+	mockCrud.EXPECT().GetNextRental(ctx, vin1).Return(nil, nil)
+
+	operations := NewOperations(mockCar, mockCrud)
+	retRental, err := operations.GetNextRental(ctx, vin1)
+
+	assert.Nil(t, err)
+	assert.Nil(t, retRental)
+}
+
+func TestOperations_GetNextRental_crudError(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	ctx := context.Background()
+	crudError := errors.New("crud error")
+
+	mockCar := mocks.NewMockClientWithResponsesInterface(ctrl)
+	mockCrud := mocks.NewMockICRUD(ctrl)
+
+	mockCar.EXPECT().GetCarWithResponse(ctx, vin1).Return(&car.GetCarResponse{ParsedCar: &domainCar}, nil)
+	mockCrud.EXPECT().GetNextRental(ctx, vin1).Return(nil, crudError)
+
+	operations := NewOperations(mockCar, mockCrud)
+	retRental, err := operations.GetNextRental(ctx, vin1)
+
+	assert.ErrorIs(t, err, crudError)
+	assert.Nil(t, retRental)
+}
+
+func TestOperations_GetNextRental_carNotFound(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	ctx := context.Background()
+
+	mockCar := mocks.NewMockClientWithResponsesInterface(ctrl)
+	mockCrud := mocks.NewMockICRUD(ctrl)
+
+	mockCar.EXPECT().GetCarWithResponse(ctx, vin1).Return(&car.GetCarResponse{
+		HTTPResponse: &http.Response{
+			StatusCode: http.StatusNotFound,
+		},
+	}, nil)
+
+	operations := NewOperations(mockCar, mockCrud)
+	retRental, err := operations.GetNextRental(ctx, vin1)
+
+	assert.ErrorIs(t, err, rentalErrors.ErrCarNotFound)
+	assert.Nil(t, retRental)
+}
+
+func TestOperations_GetNextRental_unexpectedCarResponse(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	ctx := context.Background()
+
+	mockCar := mocks.NewMockClientWithResponsesInterface(ctrl)
+	mockCrud := mocks.NewMockICRUD(ctrl)
+
+	mockCar.EXPECT().GetCarWithResponse(ctx, vin1).Return(&car.GetCarResponse{
+		HTTPResponse: &http.Response{
+			StatusCode: http.StatusTeapot,
+		},
+	}, nil)
+
+	operations := NewOperations(mockCar, mockCrud)
+	retRental, err := operations.GetNextRental(ctx, vin1)
+
+	assert.ErrorIs(t, err, rentalErrors.ErrDomainAssertion)
+	assert.Nil(t, retRental)
 }
 
 func TestOperations_GetOverview_success(t *testing.T) {

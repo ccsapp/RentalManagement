@@ -12,6 +12,10 @@ type IOperations interface {
 	GetAvailableCars(ctx context.Context, timePeriod model.TimePeriod) (*[]model.CarAvailable, error)
 	// CreateRental Create a New Rental
 	CreateRental(ctx context.Context, vin model.Vin, customerID model.CustomerId, timePeriod model.TimePeriod) error
+	// GetNextRental Get the active or next upcoming Rental of a Car in a format suitable for the Fleet Manager, that is,
+	// the active status, the customer, the rental period, and the rental ID.
+	// Returns nil if there is no next rental.
+	GetNextRental(ctx context.Context, vin model.Vin) (*model.Rental, error)
 	GetCar(ctx context.Context, vin model.Vin) (*model.Car, error)
 	// GetOverview Get an Overview of a Customer’s Rentals
 	GetOverview(ctx context.Context, customerID model.CustomerId) (*[]model.Rental, error)

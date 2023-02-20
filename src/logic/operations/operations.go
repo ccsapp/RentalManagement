@@ -71,6 +71,21 @@ func (o *operations) getAvailableCar(ctx context.Context, vin model.Vin) (*model
 	return car.MapToCarAvailable(carResponse.ParsedCar), nil
 }
 
+func (o *operations) GetNextRental(ctx context.Context, vin model.Vin) (*model.Rental, error) {
+	if err := o.ensureCarExists(ctx, vin); err != nil {
+		return nil, err
+	}
+	rental, err := o.crud.GetNextRental(ctx, vin)
+	if err != nil {
+		return nil, err
+	}
+	if rental == nil {
+		return nil, nil
+	}
+	nextRental := rental.ToRentalFleetManager()
+	return &nextRental, nil
+}
+
 func (o *operations) CreateRental(ctx context.Context, vin model.Vin, customerID model.CustomerId, timePeriod model.TimePeriod) error {
 	if err := o.ensureCarExists(ctx, vin); err != nil {
 		return err

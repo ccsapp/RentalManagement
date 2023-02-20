@@ -61,6 +61,17 @@ var staticCar = model.Car{
 	Vin: "1FVNY5Y90HP312888",
 }
 
+var exampleRental = model.Rental{
+	State:    model.UPCOMING,
+	Customer: &model.Customer{CustomerId: exampleCustomerID},
+	Car:      &staticCar,
+	Id:       "kskgnvsl",
+	RentalPeriod: model.TimePeriod{
+		StartDate: time.Date(2123, 2, 1, 0, 0, 0, 0, time.UTC),
+		EndDate:   time.Date(2123, 3, 1, 0, 0, 0, 0, time.UTC),
+	},
+}
+
 var timePeriod = model.TimePeriod{
 	StartDate: time.Date(2023, 2, 1, 0, 0, 0, 0, time.UTC),
 	EndDate:   time.Date(2023, 3, 1, 0, 0, 0, 0, time.UTC),
@@ -150,6 +161,7 @@ func TestController_GetAvailableCars_OperationsError(t *testing.T) {
 	defer ctrl.Finish()
 
 	ctx := context.Background()
+	operationsError := errors.New("operations error")
 
 	request, _ := http.NewRequestWithContext(ctx, "GET", "", nil)
 
@@ -157,7 +169,6 @@ func TestController_GetAvailableCars_OperationsError(t *testing.T) {
 	mockEchoContext.EXPECT().Request().Return(request)
 
 	mockOperations := mocks.NewMockIOperations(ctrl)
-	operationsError := errors.New("operations error")
 	mockOperations.EXPECT().GetAvailableCars(ctx, timePeriod).Return(nil, operationsError)
 
 	mockTime := mocks.NewMockITimeProvider(ctrl)
@@ -246,6 +257,94 @@ func TestController_GetCar_NotFound(t *testing.T) {
 	assert.Equal(t, err, echo.NewHTTPError(http.StatusNotFound, "car not found"))
 }
 
+func TestController_GetNextRental_success_exists(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	ctx := context.Background()
+
+	request, _ := http.NewRequestWithContext(ctx, "GET", "", nil)
+
+	mockEchoContext := mocks.NewMockContext(ctrl)
+	mockEchoContext.EXPECT().Request().Return(request)
+	mockEchoContext.EXPECT().JSON(http.StatusOK, &exampleRental)
+
+	mockOperations := mocks.NewMockIOperations(ctrl)
+	mockOperations.EXPECT().GetNextRental(ctx, testdata.VinCar).Return(&exampleRental, nil)
+
+	mockTime := mocks.NewMockITimeProvider(ctrl)
+
+	controller := NewController(mockOperations, mockTime)
+	err := controller.GetNextRental(mockEchoContext, testdata.VinCar)
+	assert.Nil(t, err)
+}
+
+func TestController_GetNextRental_success_notExists(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	ctx := context.Background()
+
+	request, _ := http.NewRequestWithContext(ctx, "GET", "", nil)
+
+	mockEchoContext := mocks.NewMockContext(ctrl)
+	mockEchoContext.EXPECT().Request().Return(request)
+	mockEchoContext.EXPECT().NoContent(http.StatusNoContent)
+
+	mockOperations := mocks.NewMockIOperations(ctrl)
+	mockOperations.EXPECT().GetNextRental(ctx, testdata.VinCar).Return(nil, nil)
+
+	mockTime := mocks.NewMockITimeProvider(ctrl)
+
+	controller := NewController(mockOperations, mockTime)
+	err := controller.GetNextRental(mockEchoContext, testdata.VinCar)
+	assert.Nil(t, err)
+}
+
+func TestController_GetNextRental_UnknownCar(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	ctx := context.Background()
+
+	request, _ := http.NewRequestWithContext(ctx, "GET", "", nil)
+
+	mockEchoContext := mocks.NewMockContext(ctrl)
+	mockEchoContext.EXPECT().Request().Return(request)
+
+	mockOperations := mocks.NewMockIOperations(ctrl)
+	mockOperations.EXPECT().GetNextRental(ctx, testdata.VinCar).Return(nil, rentalErrors.ErrCarNotFound)
+
+	mockTime := mocks.NewMockITimeProvider(ctrl)
+
+	controller := NewController(mockOperations, mockTime)
+	err := controller.GetNextRental(mockEchoContext, testdata.VinCar)
+	assert.Equal(t, err, echo.NewHTTPError(http.StatusNotFound, "car not found"))
+}
+
+func TestController_GetNextRental_OperationsError(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	ctx := context.Background()
+
+	operationsError := errors.New("operations error")
+
+	request, _ := http.NewRequestWithContext(ctx, "GET", "", nil)
+
+	mockEchoContext := mocks.NewMockContext(ctrl)
+	mockEchoContext.EXPECT().Request().Return(request)
+
+	mockOperations := mocks.NewMockIOperations(ctrl)
+	mockOperations.EXPECT().GetNextRental(ctx, testdata.VinCar).Return(nil, operationsError)
+
+	mockTime := mocks.NewMockITimeProvider(ctrl)
+
+	controller := NewController(mockOperations, mockTime)
+	err := controller.GetNextRental(mockEchoContext, testdata.VinCar)
+	assert.ErrorIs(t, err, operationsError)
+}
+
 func TestController_CreateRental_success(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
@@ -255,12 +354,12 @@ func TestController_CreateRental_success(t *testing.T) {
 	request, _ := http.NewRequestWithContext(ctx, "POST", "", nil)
 
 	mockEchoContext := mocks.NewMockContext(ctrl)
-	mockOperations := mocks.NewMockIOperations(ctrl)
-
 	mockEchoContext.EXPECT().Bind(gomock.Any()).SetArg(0, timePeriod).Return(nil)
 	mockEchoContext.EXPECT().Request().Return(request)
-	mockOperations.EXPECT().CreateRental(ctx, testdata.VinCar, exampleCustomerID, timePeriod).Return(nil)
 	mockEchoContext.EXPECT().NoContent(http.StatusCreated)
+
+	mockOperations := mocks.NewMockIOperations(ctrl)
+	mockOperations.EXPECT().CreateRental(ctx, testdata.VinCar, exampleCustomerID, timePeriod).Return(nil)
 
 	mockTime := mocks.NewMockITimeProvider(ctrl)
 	mockTime.EXPECT().Now().Return(currentTime)
@@ -276,15 +375,15 @@ func TestController_CreateRental_OperationsError(t *testing.T) {
 	defer ctrl.Finish()
 
 	ctx := context.Background()
+	operationsError := errors.New("operations error")
 
 	request, _ := http.NewRequestWithContext(ctx, "POST", "", nil)
 
 	mockEchoContext := mocks.NewMockContext(ctrl)
-	mockOperations := mocks.NewMockIOperations(ctrl)
-
-	operationsError := errors.New("operations error")
 	mockEchoContext.EXPECT().Bind(gomock.Any()).SetArg(0, timePeriod).Return(nil)
 	mockEchoContext.EXPECT().Request().Return(request)
+
+	mockOperations := mocks.NewMockIOperations(ctrl)
 	mockOperations.EXPECT().CreateRental(ctx, testdata.VinCar, exampleCustomerID, timePeriod).Return(operationsError)
 
 	mockTime := mocks.NewMockITimeProvider(ctrl)
@@ -305,10 +404,10 @@ func TestController_CreateRental_CarNotFound(t *testing.T) {
 	request, _ := http.NewRequestWithContext(ctx, "POST", "", nil)
 
 	mockEchoContext := mocks.NewMockContext(ctrl)
-	mockOperations := mocks.NewMockIOperations(ctrl)
-
 	mockEchoContext.EXPECT().Bind(gomock.Any()).SetArg(0, timePeriod).Return(nil)
 	mockEchoContext.EXPECT().Request().Return(request)
+
+	mockOperations := mocks.NewMockIOperations(ctrl)
 	mockOperations.EXPECT().CreateRental(ctx, testdata.VinCar, exampleCustomerID, timePeriod).
 		Return(rentalErrors.ErrCarNotFound)
 
@@ -326,10 +425,11 @@ func TestController_CreateRental_invalidTimePeriod(t *testing.T) {
 	defer ctrl.Finish()
 
 	mockEchoContext := mocks.NewMockContext(ctrl)
-	mockOperations := mocks.NewMockIOperations(ctrl)
-	mockTime := mocks.NewMockITimeProvider(ctrl)
-
 	mockEchoContext.EXPECT().Bind(gomock.Any()).SetArg(0, invalidTimePeriod).Return(nil)
+
+	mockOperations := mocks.NewMockIOperations(ctrl)
+
+	mockTime := mocks.NewMockITimeProvider(ctrl)
 
 	controller := NewController(mockOperations, mockTime)
 	err := controller.CreateRental(mockEchoContext, testdata.VinCar,
@@ -343,10 +443,11 @@ func TestController_CreateRental_Past(t *testing.T) {
 	defer ctrl.Finish()
 
 	mockEchoContext := mocks.NewMockContext(ctrl)
-	mockOperations := mocks.NewMockIOperations(ctrl)
-	mockTime := mocks.NewMockITimeProvider(ctrl)
-
 	mockEchoContext.EXPECT().Bind(gomock.Any()).SetArg(0, timePeriod1900).Return(nil)
+
+	mockOperations := mocks.NewMockIOperations(ctrl)
+
+	mockTime := mocks.NewMockITimeProvider(ctrl)
 	mockTime.EXPECT().Now().Return(future)
 
 	controller := NewController(mockOperations, mockTime)
@@ -365,14 +466,15 @@ func TestController_CreateRental_ConflictingRental(t *testing.T) {
 	request, _ := http.NewRequestWithContext(ctx, "POST", "", nil)
 
 	mockEchoContext := mocks.NewMockContext(ctrl)
-	mockOperations := mocks.NewMockIOperations(ctrl)
-	mockTime := mocks.NewMockITimeProvider(ctrl)
-
 	mockEchoContext.EXPECT().Bind(gomock.Any()).SetArg(0, timePeriod).Return(nil)
-	mockTime.EXPECT().Now().Return(currentTime)
 	mockEchoContext.EXPECT().Request().Return(request)
+
+	mockOperations := mocks.NewMockIOperations(ctrl)
 	mockOperations.EXPECT().CreateRental(ctx, testdata.VinCar, exampleCustomerID, timePeriod).
 		Return(rentalErrors.ErrConflictingRentalExists)
+
+	mockTime := mocks.NewMockITimeProvider(ctrl)
+	mockTime.EXPECT().Now().Return(currentTime)
 
 	controller := NewController(mockOperations, mockTime)
 	err := controller.CreateRental(mockEchoContext, testdata.VinCar,
@@ -408,6 +510,7 @@ func TestController_GetOverview_operationsError(t *testing.T) {
 	defer ctrl.Finish()
 
 	ctx := context.Background()
+	operationsError := errors.New("operations error")
 
 	request, _ := http.NewRequestWithContext(ctx, "GET", "", nil)
 
@@ -415,7 +518,6 @@ func TestController_GetOverview_operationsError(t *testing.T) {
 	mockContext.EXPECT().Request().Return(request)
 
 	mockOperations := mocks.NewMockIOperations(ctrl)
-	operationsError := errors.New("operations error")
 	mockOperations.EXPECT().GetOverview(ctx, exampleCustomerID).Return(nil, operationsError)
 
 	mockTime := mocks.NewMockITimeProvider(ctrl)

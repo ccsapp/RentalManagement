@@ -38,6 +38,8 @@ type ICRUD interface {
 	SetTrunkToken(ctx context.Context, rentalId model.RentalId,
 		trunkAccess model.TrunkAccess) (*model.TrunkAccess, error)
 	GetRental(ctx context.Context, rentalId model.RentalId) (*model.Rental, error)
+	// GetNextRental returns the active or next upcoming rental of a car. If there is no next rental, nil is returned.
+	GetNextRental(ctx context.Context, vin model.Vin) (*model.Rental, error)
 }
 
 type crud struct {
@@ -266,4 +268,30 @@ func (c *crud) GetRental(ctx context.Context, rentalId model.RentalId) (*model.R
 
 	rentals := mappers.MapCarFromDbToRentals(&cars[0], c.timeProvider)
 	return &rentals[0], nil
+}
+
+func (c *crud) GetNextRental(ctx context.Context, vin model.Vin) (*model.Rental, error) {
+	var cars []entities.Car
+
+	factory := c.db.GetFactory()
+
+	err := c.db.Aggregate(ctx, c.collection, factory.ArrayFilterAggregation(
+		"rentals",
+		factory.FilterAnd(
+			factory.FilterEqual("_id", vin),
+			factory.FilterGreater("rentals.rentalPeriod.endDate", c.timeProvider.Now()),
+		),
+		1, //limit to 1
+		factory.SortAsc("rentals.rentalPeriod.startDate"),
+	), &cars)
+	if err != nil {
+		return nil, err
+	}
+
+	if len(cars) == 0 {
+		return nil, nil
+	}
+	rental := mappers.MapCarsFromDbToRentals(&cars, c.timeProvider)
+
+	return &rental[0], nil
 }
