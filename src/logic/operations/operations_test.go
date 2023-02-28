@@ -349,7 +349,9 @@ func TestOperations_GetAvailableCars_unexpectedCarResponse(t *testing.T) {
 
 	mockCrud := mocks.NewMockICRUD(ctrl)
 
-	operations := NewOperations(mockCar, mockCrud)
+	mockTime := mocks.NewMockITimeProvider(ctrl)
+
+	operations := NewOperations(mockCar, mockCrud, mockTime)
 	ret, err := operations.GetAvailableCars(ctx, timePeriod)
 
 	assert.ErrorIs(t, err, rentalErrors.ErrDomainAssertion)
@@ -370,7 +372,9 @@ func TestOperations_GetAvailableCars_crudError(t *testing.T) {
 	mockCrud := mocks.NewMockICRUD(ctrl)
 	mockCrud.EXPECT().GetUnavailableCars(ctx, timePeriod).Return(nil, crudError)
 
-	operations := NewOperations(mockCar, mockCrud)
+	mockTime := mocks.NewMockITimeProvider(ctrl)
+
+	operations := NewOperations(mockCar, mockCrud, mockTime)
 	ret, err := operations.GetAvailableCars(ctx, timePeriod)
 	assert.ErrorIs(t, err, crudError)
 	assert.Nil(t, ret)
@@ -389,7 +393,9 @@ func TestOperations_GetAvailableCars_success(t *testing.T) {
 	mockCrud := mocks.NewMockICRUD(ctrl)
 	mockCrud.EXPECT().GetUnavailableCars(ctx, timePeriod).Return(&[]model.Vin{vin1}, nil)
 
-	operations := NewOperations(mockCar, mockCrud)
+	mockTime := mocks.NewMockITimeProvider(ctrl)
+
+	operations := NewOperations(mockCar, mockCrud, mockTime)
 	ret, err := operations.GetAvailableCars(ctx, timePeriod)
 	assert.Nil(t, err)
 	assert.Equal(t, &[]model.CarAvailable{carAvailable}, ret)
@@ -407,7 +413,9 @@ func TestOperations_CreateRental_success(t *testing.T) {
 	mockCar.EXPECT().GetCarWithResponse(ctx, vin1).Return(&car.GetCarResponse{ParsedCar: &domainCar}, nil)
 	mockCrud.EXPECT().CreateRental(ctx, vin1, exampleCustomerID, timePeriod).Return(nil)
 
-	operations := NewOperations(mockCar, mockCrud)
+	mockTime := mocks.NewMockITimeProvider(ctrl)
+
+	operations := NewOperations(mockCar, mockCrud, mockTime)
 	err := operations.CreateRental(ctx, vin1, exampleCustomerID, timePeriod)
 	assert.Nil(t, err)
 }
@@ -427,7 +435,9 @@ func TestOperations_CreateRental_unexpectedCarResponse(t *testing.T) {
 		},
 	}, nil)
 
-	operations := NewOperations(mockCar, mockCrud)
+	mockTime := mocks.NewMockITimeProvider(ctrl)
+
+	operations := NewOperations(mockCar, mockCrud, mockTime)
 	err := operations.CreateRental(ctx, vin1, exampleCustomerID, timePeriod)
 	assert.ErrorIs(t, err, rentalErrors.ErrDomainAssertion)
 }
@@ -447,7 +457,9 @@ func TestOperations_CreateRental_carNotFound(t *testing.T) {
 		},
 	}, nil)
 
-	operations := NewOperations(mockCar, mockCrud)
+	mockTime := mocks.NewMockITimeProvider(ctrl)
+
+	operations := NewOperations(mockCar, mockCrud, mockTime)
 	err := operations.CreateRental(ctx, vin1, exampleCustomerID, timePeriod)
 	assert.ErrorIs(t, err, rentalErrors.ErrCarNotFound)
 }
@@ -464,7 +476,9 @@ func TestOperations_CreateRental_conflictingRentalExists(t *testing.T) {
 	mockCar.EXPECT().GetCarWithResponse(ctx, vin1).Return(&car.GetCarResponse{ParsedCar: &domainCar}, nil)
 	mockCrud.EXPECT().CreateRental(ctx, vin1, exampleCustomerID, timePeriod).Return(rentalErrors.ErrConflictingRentalExists)
 
-	operations := NewOperations(mockCar, mockCrud)
+	mockTime := mocks.NewMockITimeProvider(ctrl)
+
+	operations := NewOperations(mockCar, mockCrud, mockTime)
 	err := operations.CreateRental(ctx, vin1, exampleCustomerID, timePeriod)
 	assert.ErrorIs(t, err, rentalErrors.ErrConflictingRentalExists)
 }
@@ -480,7 +494,9 @@ func TestOperations_GetCar_success(t *testing.T) {
 
 	mockCar.EXPECT().GetCarWithResponse(ctx, vin1).Return(&car.GetCarResponse{ParsedCar: &domainCar}, nil)
 
-	operations := NewOperations(mockCar, mockCrud)
+	mockTime := mocks.NewMockITimeProvider(ctrl)
+
+	operations := NewOperations(mockCar, mockCrud, mockTime)
 	retCar, err := operations.GetCar(ctx, vin1)
 
 	assert.Nil(t, err)
@@ -502,7 +518,9 @@ func TestOperations_GetCar_unexpectedCarResponse(t *testing.T) {
 		},
 	}, nil)
 
-	operations := NewOperations(mockCar, mockCrud)
+	mockTime := mocks.NewMockITimeProvider(ctrl)
+
+	operations := NewOperations(mockCar, mockCrud, mockTime)
 	retCar, err := operations.GetCar(ctx, vin1)
 
 	assert.ErrorIs(t, err, rentalErrors.ErrDomainAssertion)
@@ -524,7 +542,9 @@ func TestOperations_GetCar_carNotFound(t *testing.T) {
 		},
 	}, nil)
 
-	operations := NewOperations(mockCar, mockCrud)
+	mockTime := mocks.NewMockITimeProvider(ctrl)
+
+	operations := NewOperations(mockCar, mockCrud, mockTime)
 	retCar, err := operations.GetCar(ctx, vin1)
 
 	assert.ErrorIs(t, err, rentalErrors.ErrCarNotFound)
@@ -543,7 +563,9 @@ func TestOperations_GetNextRental_success(t *testing.T) {
 	mockCar.EXPECT().GetCarWithResponse(ctx, vin1).Return(&car.GetCarResponse{ParsedCar: &domainCar}, nil)
 	mockCrud.EXPECT().GetNextRental(ctx, vin1).Return(&rentalCrud, nil)
 
-	operations := NewOperations(mockCar, mockCrud)
+	mockTime := mocks.NewMockITimeProvider(ctrl)
+
+	operations := NewOperations(mockCar, mockCrud, mockTime)
 	retRental, err := operations.GetNextRental(ctx, vin1)
 
 	assert.Nil(t, err)
@@ -562,7 +584,9 @@ func TestOperations_GetNextRental_noRental(t *testing.T) {
 	mockCar.EXPECT().GetCarWithResponse(ctx, vin1).Return(&car.GetCarResponse{ParsedCar: &domainCar}, nil)
 	mockCrud.EXPECT().GetNextRental(ctx, vin1).Return(nil, nil)
 
-	operations := NewOperations(mockCar, mockCrud)
+	mockTime := mocks.NewMockITimeProvider(ctrl)
+
+	operations := NewOperations(mockCar, mockCrud, mockTime)
 	retRental, err := operations.GetNextRental(ctx, vin1)
 
 	assert.Nil(t, err)
@@ -582,7 +606,9 @@ func TestOperations_GetNextRental_crudError(t *testing.T) {
 	mockCar.EXPECT().GetCarWithResponse(ctx, vin1).Return(&car.GetCarResponse{ParsedCar: &domainCar}, nil)
 	mockCrud.EXPECT().GetNextRental(ctx, vin1).Return(nil, crudError)
 
-	operations := NewOperations(mockCar, mockCrud)
+	mockTime := mocks.NewMockITimeProvider(ctrl)
+
+	operations := NewOperations(mockCar, mockCrud, mockTime)
 	retRental, err := operations.GetNextRental(ctx, vin1)
 
 	assert.ErrorIs(t, err, crudError)
@@ -604,7 +630,9 @@ func TestOperations_GetNextRental_carNotFound(t *testing.T) {
 		},
 	}, nil)
 
-	operations := NewOperations(mockCar, mockCrud)
+	mockTime := mocks.NewMockITimeProvider(ctrl)
+
+	operations := NewOperations(mockCar, mockCrud, mockTime)
 	retRental, err := operations.GetNextRental(ctx, vin1)
 
 	assert.ErrorIs(t, err, rentalErrors.ErrCarNotFound)
@@ -626,7 +654,9 @@ func TestOperations_GetNextRental_unexpectedCarResponse(t *testing.T) {
 		},
 	}, nil)
 
-	operations := NewOperations(mockCar, mockCrud)
+	mockTime := mocks.NewMockITimeProvider(ctrl)
+
+	operations := NewOperations(mockCar, mockCrud, mockTime)
 	retRental, err := operations.GetNextRental(ctx, vin1)
 
 	assert.ErrorIs(t, err, rentalErrors.ErrDomainAssertion)
@@ -645,7 +675,9 @@ func TestOperations_GetOverview_success(t *testing.T) {
 	mockCrud := mocks.NewMockICRUD(ctrl)
 	mockCrud.EXPECT().GetRentalsOfCustomer(ctx, exampleCustomerID).Return(&[]model.Rental{rentalCrud}, nil)
 
-	operations := NewOperations(mockCar, mockCrud)
+	mockTime := mocks.NewMockITimeProvider(ctrl)
+
+	operations := NewOperations(mockCar, mockCrud, mockTime)
 	rentals, err := operations.GetOverview(ctx, exampleCustomerID)
 
 	assert.Nil(t, err)
@@ -664,7 +696,9 @@ func TestOperations_GetOverview_CrudError(t *testing.T) {
 	mockCrud := mocks.NewMockICRUD(ctrl)
 	mockCrud.EXPECT().GetRentalsOfCustomer(ctx, exampleCustomerID).Return(nil, crudError)
 
-	operations := NewOperations(mockCar, mockCrud)
+	mockTime := mocks.NewMockITimeProvider(ctrl)
+
+	operations := NewOperations(mockCar, mockCrud, mockTime)
 	rentals, err := operations.GetOverview(ctx, exampleCustomerID)
 
 	assert.ErrorIs(t, err, crudError)
@@ -685,7 +719,9 @@ func TestOperations_GetOverview_DomainError(t *testing.T) {
 	mockCrud := mocks.NewMockICRUD(ctrl)
 	mockCrud.EXPECT().GetRentalsOfCustomer(ctx, exampleCustomerID).Return(&[]model.Rental{rentalCrud}, nil)
 
-	operations := NewOperations(mockCar, mockCrud)
+	mockTime := mocks.NewMockITimeProvider(ctrl)
+
+	operations := NewOperations(mockCar, mockCrud, mockTime)
 	rentals, err := operations.GetOverview(ctx, exampleCustomerID)
 
 	assert.ErrorIs(t, err, domainError)
@@ -708,7 +744,9 @@ func TestOperations_GetOverview_CarNotFound(t *testing.T) {
 	mockCrud := mocks.NewMockICRUD(ctrl)
 	mockCrud.EXPECT().GetRentalsOfCustomer(ctx, exampleCustomerID).Return(&[]model.Rental{rentalCrud}, nil)
 
-	operations := NewOperations(mockCar, mockCrud)
+	mockTime := mocks.NewMockITimeProvider(ctrl)
+
+	operations := NewOperations(mockCar, mockCrud, mockTime)
 	rentals, err := operations.GetOverview(ctx, exampleCustomerID)
 
 	assert.ErrorIs(t, err, rentalErrors.ErrDomainAssertion)
@@ -731,7 +769,9 @@ func TestOperations_GetOverview_UnknownDomainResponse(t *testing.T) {
 	mockCrud := mocks.NewMockICRUD(ctrl)
 	mockCrud.EXPECT().GetRentalsOfCustomer(ctx, exampleCustomerID).Return(&[]model.Rental{rentalCrud}, nil)
 
-	operations := NewOperations(mockCar, mockCrud)
+	mockTime := mocks.NewMockITimeProvider(ctrl)
+
+	operations := NewOperations(mockCar, mockCrud, mockTime)
 	rentals, err := operations.GetOverview(ctx, exampleCustomerID)
 
 	assert.ErrorIs(t, err, rentalErrors.ErrDomainAssertion)
@@ -750,7 +790,9 @@ func TestOperations_GetRentalStatus_success_active(t *testing.T) {
 	mockCrud := mocks.NewMockICRUD(ctrl)
 	mockCrud.EXPECT().GetRental(ctx, rentalCrud.Id).Return(&rentalCrud, nil)
 
-	operations := NewOperations(mockCar, mockCrud)
+	mockTime := mocks.NewMockITimeProvider(ctrl)
+
+	operations := NewOperations(mockCar, mockCrud, mockTime)
 	rental, err := operations.GetRentalStatus(ctx, rentalCrud.Id)
 
 	assert.Nil(t, err)
@@ -769,7 +811,9 @@ func TestOperations_GetRentalStatus_success_Expired(t *testing.T) {
 	mockCrud := mocks.NewMockICRUD(ctrl)
 	mockCrud.EXPECT().GetRental(ctx, rentalCrud.Id).Return(&rentalCrudExpired, nil)
 
-	operations := NewOperations(mockCar, mockCrud)
+	mockTime := mocks.NewMockITimeProvider(ctrl)
+
+	operations := NewOperations(mockCar, mockCrud, mockTime)
 	rental, err := operations.GetRentalStatus(ctx, rentalCrud.Id)
 
 	assert.Nil(t, err)
@@ -788,7 +832,9 @@ func TestOperations_GetRentalStatus_success_Upcoming(t *testing.T) {
 	mockCrud := mocks.NewMockICRUD(ctrl)
 	mockCrud.EXPECT().GetRental(ctx, rentalCrud.Id).Return(&rentalCrudUpcoming, nil)
 
-	operations := NewOperations(mockCar, mockCrud)
+	mockTime := mocks.NewMockITimeProvider(ctrl)
+
+	operations := NewOperations(mockCar, mockCrud, mockTime)
 	rental, err := operations.GetRentalStatus(ctx, rentalCrud.Id)
 
 	assert.Nil(t, err)
@@ -807,7 +853,9 @@ func TestOperations_GetRentalStatus_crudError(t *testing.T) {
 	mockCrud := mocks.NewMockICRUD(ctrl)
 	mockCrud.EXPECT().GetRental(ctx, "rentalId").Return(nil, crudError)
 
-	operations := NewOperations(mockCar, mockCrud)
+	mockTime := mocks.NewMockITimeProvider(ctrl)
+
+	operations := NewOperations(mockCar, mockCrud, mockTime)
 	rental, err := operations.GetRentalStatus(ctx, "rentalId")
 
 	assert.ErrorIs(t, err, crudError)
@@ -828,7 +876,9 @@ func TestOperations_GetRentalStatus_domainError(t *testing.T) {
 	mockCrud := mocks.NewMockICRUD(ctrl)
 	mockCrud.EXPECT().GetRental(ctx, rentalCustomerShort.Id).Return(&rentalCrud, nil)
 
-	operations := NewOperations(mockCar, mockCrud)
+	mockTime := mocks.NewMockITimeProvider(ctrl)
+
+	operations := NewOperations(mockCar, mockCrud, mockTime)
 	rental, err := operations.GetRentalStatus(ctx, rentalCustomerShort.Id)
 
 	assert.ErrorIs(t, err, domainError)
@@ -851,7 +901,9 @@ func TestOperations_GetRentalStatus_carNotFound(t *testing.T) {
 	mockCrud := mocks.NewMockICRUD(ctrl)
 	mockCrud.EXPECT().GetRental(ctx, rentalCustomerShort.Id).Return(&rentalCrud, nil)
 
-	operations := NewOperations(mockCar, mockCrud)
+	mockTime := mocks.NewMockITimeProvider(ctrl)
+
+	operations := NewOperations(mockCar, mockCrud, mockTime)
 	rental, err := operations.GetRentalStatus(ctx, rentalCustomerShort.Id)
 
 	assert.ErrorIs(t, err, rentalErrors.ErrDomainAssertion)
@@ -874,7 +926,9 @@ func TestOperations_GetRentalStatus_UnknownDomainResponse(t *testing.T) {
 	mockCrud := mocks.NewMockICRUD(ctrl)
 	mockCrud.EXPECT().GetRental(ctx, rentalCustomerShort.Id).Return(&rentalCrud, nil)
 
-	operations := NewOperations(mockCar, mockCrud)
+	mockTime := mocks.NewMockITimeProvider(ctrl)
+
+	operations := NewOperations(mockCar, mockCrud, mockTime)
 	rental, err := operations.GetRentalStatus(ctx, rentalCustomerShort.Id)
 
 	assert.ErrorIs(t, err, rentalErrors.ErrDomainAssertion)
@@ -897,7 +951,9 @@ func TestOperations_GrantTrunkAccess_success(t *testing.T) {
 		},
 	)
 
-	operations := NewOperations(mockCar, mockCrud)
+	mockTime := mocks.NewMockITimeProvider(ctrl)
+
+	operations := NewOperations(mockCar, mockCrud, mockTime)
 	trunkAccess, err := operations.GrantTrunkAccess(ctx, "rentalId", timePeriod)
 
 	assert.Nil(t, err)
@@ -916,7 +972,9 @@ func TestOperations_GrantTrunkAccess_unknownRental(t *testing.T) {
 	mockCrud := mocks.NewMockICRUD(ctrl)
 	mockCrud.EXPECT().SetTrunkToken(ctx, "rentalId", gomock.Any()).Return(nil, rentalErrors.ErrRentalNotFound)
 
-	operations := NewOperations(mockCar, mockCrud)
+	mockTime := mocks.NewMockITimeProvider(ctrl)
+
+	operations := NewOperations(mockCar, mockCrud, mockTime)
 	trunkAccess, err := operations.GrantTrunkAccess(ctx, "rentalId", timePeriod)
 
 	assert.ErrorIs(t, err, rentalErrors.ErrRentalNotFound)
@@ -936,7 +994,9 @@ func TestOperations_GrantTrunkAccess_unexpectedCrudError(t *testing.T) {
 	mockCrud := mocks.NewMockICRUD(ctrl)
 	mockCrud.EXPECT().SetTrunkToken(ctx, "rentalId", gomock.Any()).Return(nil, crudError)
 
-	operations := NewOperations(mockCar, mockCrud)
+	mockTime := mocks.NewMockITimeProvider(ctrl)
+
+	operations := NewOperations(mockCar, mockCrud, mockTime)
 	trunkAccess, err := operations.GrantTrunkAccess(ctx, "rentalId", timePeriod)
 
 	assert.ErrorIs(t, err, crudError)
@@ -955,7 +1015,9 @@ func TestOperations_GrantTrunkAccess_rentalExpired(t *testing.T) {
 	mockCrud.EXPECT().SetTrunkToken(ctx, "rentalId", gomock.Any()).
 		Return(nil, rentalErrors.ErrRentalNotActive)
 
-	operations := NewOperations(mockCar, mockCrud)
+	mockTime := mocks.NewMockITimeProvider(ctrl)
+
+	operations := NewOperations(mockCar, mockCrud, mockTime)
 	trunkAccess, err := operations.GrantTrunkAccess(ctx, "rentalId", timePeriod)
 
 	assert.ErrorIs(t, err, rentalErrors.ErrRentalNotActive)
@@ -974,7 +1036,9 @@ func TestOperations_GrantTrunkAccess_rentalUpcoming(t *testing.T) {
 	mockCrud.EXPECT().SetTrunkToken(ctx, "rentalId", gomock.Any()).
 		Return(nil, rentalErrors.ErrRentalNotActive)
 
-	operations := NewOperations(mockCar, mockCrud)
+	mockTime := mocks.NewMockITimeProvider(ctrl)
+
+	operations := NewOperations(mockCar, mockCrud, mockTime)
 	trunkAccess, err := operations.GrantTrunkAccess(ctx, "rentalId", timePeriod)
 
 	assert.ErrorIs(t, err, rentalErrors.ErrRentalNotActive)
@@ -993,7 +1057,9 @@ func TestOperations_GrantTrunkAccess_rentalNotOverlapping(t *testing.T) {
 	mockCrud.EXPECT().SetTrunkToken(ctx, "rentalId", gomock.Any()).
 		Return(nil, rentalErrors.ErrRentalNotOverlapping)
 
-	operations := NewOperations(mockCar, mockCrud)
+	mockTime := mocks.NewMockITimeProvider(ctrl)
+
+	operations := NewOperations(mockCar, mockCrud, mockTime)
 	trunkAccess, err := operations.GrantTrunkAccess(ctx, "rentalId", timePeriod)
 
 	assert.ErrorIs(t, err, rentalErrors.ErrRentalNotOverlapping)
@@ -1012,9 +1078,489 @@ func TestOperations_GrantTrunkAccess_resourceConflict(t *testing.T) {
 	mockCrud.EXPECT().SetTrunkToken(ctx, "rentalId", gomock.Any()).
 		Return(nil, database.OptimisticLockingError)
 
-	operations := NewOperations(mockCar, mockCrud)
+	mockTime := mocks.NewMockITimeProvider(ctrl)
+
+	operations := NewOperations(mockCar, mockCrud, mockTime)
 	trunkAccess, err := operations.GrantTrunkAccess(ctx, "rentalId", timePeriod)
 
 	assert.ErrorIs(t, err, rentalErrors.ErrResourceConflict)
 	assert.Nil(t, trunkAccess)
+}
+
+func TestOperations_GetLockState_success(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	ctx := context.Background()
+
+	mockCrud := mocks.NewMockICRUD(ctrl)
+	mockCrud.EXPECT().GetTrunkAccess(ctx, vin2, rentalCrud.Token.Token).Return(rentalCrud.Token, nil)
+
+	mockCar := mocks.NewMockClientWithResponsesInterface(ctrl)
+	mockCar.EXPECT().GetCarWithResponse(ctx, vin2).Return(&car.GetCarResponse{ParsedCar: &domainCar}, nil)
+
+	mockTime := mocks.NewMockITimeProvider(ctrl)
+	mockTime.EXPECT().Now().Return(time.Date(2023, 3, 2, 5, 0, 0, 0, time.UTC))
+
+	operations := NewOperations(mockCar, mockCrud, mockTime)
+	lockState, err := operations.GetLockState(ctx, vin2, rentalCrud.Token.Token)
+	assert.Nil(t, err)
+	assert.Equal(t, model.LOCKED, *lockState)
+}
+
+func TestOperations_GetLockState_crudError(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	ctx := context.Background()
+	crudError := errors.New("crud error")
+
+	mockCar := mocks.NewMockClientWithResponsesInterface(ctrl)
+
+	mockCrud := mocks.NewMockICRUD(ctrl)
+	mockCrud.EXPECT().GetTrunkAccess(ctx, vin2, rentalCrud.Token.Token).Return(nil, crudError)
+
+	mockTime := mocks.NewMockITimeProvider(ctrl)
+
+	operations := NewOperations(mockCar, mockCrud, mockTime)
+	lockState, err := operations.GetLockState(ctx, vin2, rentalCrud.Token.Token)
+
+	assert.ErrorIs(t, err, crudError)
+	assert.Nil(t, lockState)
+}
+
+func TestOperations_GetLockState_validInFutureTrunkAccessDeniedError(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	ctx := context.Background()
+
+	mockCar := mocks.NewMockClientWithResponsesInterface(ctrl)
+
+	mockCrud := mocks.NewMockICRUD(ctrl)
+	mockCrud.EXPECT().GetTrunkAccess(ctx, vin2, rentalCrudUpcoming.Token.Token).Return(rentalCrudUpcoming.Token, nil)
+
+	mockTime := mocks.NewMockITimeProvider(ctrl)
+	mockTime.EXPECT().Now().Return(time.Date(1900, 3, 2, 5, 0, 0, 0, time.UTC))
+
+	operations := NewOperations(mockCar, mockCrud, mockTime)
+	lockState, err := operations.GetLockState(ctx, vin2, rentalCrud.Token.Token)
+	assert.Equal(t, rentalErrors.ErrTrunkAccessDenied, err)
+	assert.Nil(t, lockState)
+}
+
+func TestOperations_GetLockState_validInPastTrunkAccessDeniedError(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	ctx := context.Background()
+
+	mockCar := mocks.NewMockClientWithResponsesInterface(ctrl)
+
+	mockCrud := mocks.NewMockICRUD(ctrl)
+	mockCrud.EXPECT().GetTrunkAccess(ctx, vin2, rentalCrudExpired.Token.Token).Return(rentalCrudExpired.Token, nil)
+
+	mockTime := mocks.NewMockITimeProvider(ctrl)
+	mockTime.EXPECT().Now().Return(time.Date(3000, 3, 2, 5, 0, 0, 0, time.UTC))
+
+	operations := NewOperations(mockCar, mockCrud, mockTime)
+	lockState, err := operations.GetLockState(ctx, vin2, rentalCrud.Token.Token)
+	assert.Equal(t, rentalErrors.ErrTrunkAccessDenied, err)
+	assert.Nil(t, lockState)
+}
+
+func TestOperations_GetLockState_unknownDomainResponse(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	ctx := context.Background()
+
+	mockCar := mocks.NewMockClientWithResponsesInterface(ctrl)
+	mockCar.EXPECT().GetCarWithResponse(ctx, vin2).Return(&car.GetCarResponse{
+		HTTPResponse: &http.Response{
+			StatusCode: http.StatusTeapot,
+		},
+	}, nil)
+
+	mockCrud := mocks.NewMockICRUD(ctrl)
+	mockCrud.EXPECT().GetTrunkAccess(ctx, vin2, rentalCrud.Token.Token).Return(rentalCrud.Token, nil)
+
+	mockTime := mocks.NewMockITimeProvider(ctrl)
+	mockTime.EXPECT().Now().Return(time.Date(2023, 3, 2, 5, 0, 0, 0, time.UTC))
+
+	operations := NewOperations(mockCar, mockCrud, mockTime)
+	lockState, err := operations.GetLockState(ctx, vin2, rentalCrud.Token.Token)
+
+	assert.ErrorIs(t, err, rentalErrors.ErrDomainAssertion)
+	assert.Nil(t, lockState)
+}
+
+func TestOperations_GetLockState_carNotFound(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	ctx := context.Background()
+
+	mockCar := mocks.NewMockClientWithResponsesInterface(ctrl)
+	mockCar.EXPECT().GetCarWithResponse(ctx, vin2).Return(&car.GetCarResponse{
+		HTTPResponse: &http.Response{
+			StatusCode: http.StatusNotFound,
+		},
+	}, nil)
+
+	mockCrud := mocks.NewMockICRUD(ctrl)
+	mockCrud.EXPECT().GetTrunkAccess(ctx, vin2, rentalCrud.Token.Token).Return(rentalCrud.Token, nil)
+
+	mockTime := mocks.NewMockITimeProvider(ctrl)
+	mockTime.EXPECT().Now().Return(time.Date(2023, 3, 2, 5, 0, 0, 0, time.UTC))
+
+	operations := NewOperations(mockCar, mockCrud, mockTime)
+	lockState, err := operations.GetLockState(ctx, vin2, rentalCrud.Token.Token)
+
+	assert.ErrorIs(t, err, rentalErrors.ErrDomainAssertion)
+	assert.Nil(t, lockState)
+}
+
+func TestOperations_GetLockState_domainError(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	ctx := context.Background()
+
+	domainError := errors.New("domain error")
+
+	mockCar := mocks.NewMockClientWithResponsesInterface(ctrl)
+	mockCar.EXPECT().GetCarWithResponse(ctx, vin2).Return(nil, domainError)
+
+	mockCrud := mocks.NewMockICRUD(ctrl)
+	mockCrud.EXPECT().GetTrunkAccess(ctx, vin2, rentalCrud.Token.Token).Return(rentalCrud.Token, nil)
+
+	mockTime := mocks.NewMockITimeProvider(ctrl)
+	mockTime.EXPECT().Now().Return(time.Date(2023, 3, 2, 5, 0, 0, 0, time.UTC))
+
+	operations := NewOperations(mockCar, mockCrud, mockTime)
+	lockState, err := operations.GetLockState(ctx, vin2, rentalCrud.Token.Token)
+
+	assert.ErrorIs(t, err, domainError)
+	assert.Nil(t, lockState)
+}
+
+func TestOperations_SetLockStateCustomerId_success(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	ctx := context.Background()
+
+	mockCrud := mocks.NewMockICRUD(ctrl)
+	mockCrud.EXPECT().GetNextRental(ctx, vin2).Return(&rentalCrud, nil)
+
+	mockCar := mocks.NewMockClientWithResponsesInterface(ctrl)
+	mockCar.EXPECT().ChangeTrunkLockStateWithResponse(ctx, vin2,
+		carTypes.DynamicDataLockState(model.LOCKED)).Return(&car.ChangeTrunkLockStateResponse{
+		HTTPResponse: &http.Response{
+			StatusCode: http.StatusNoContent,
+		},
+	}, nil)
+
+	mockTime := mocks.NewMockITimeProvider(ctrl)
+
+	operations := NewOperations(mockCar, mockCrud, mockTime)
+	err := operations.SetLockStateCustomerId(ctx, model.LOCKED, vin2, exampleCustomerID)
+	assert.Nil(t, err)
+}
+
+func TestOperations_SetLockStateCustomerId_crudError(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	ctx := context.Background()
+
+	mockCrud := mocks.NewMockICRUD(ctrl)
+	crudError := errors.New("crud error")
+	mockCrud.EXPECT().GetNextRental(ctx, vin2).Return(nil, crudError)
+
+	mockCar := mocks.NewMockClientWithResponsesInterface(ctrl)
+
+	mockTime := mocks.NewMockITimeProvider(ctrl)
+
+	operations := NewOperations(mockCar, mockCrud, mockTime)
+	err := operations.SetLockStateCustomerId(ctx, model.LOCKED, vin2, exampleCustomerID)
+	assert.ErrorIs(t, err, crudError)
+}
+
+func TestOperations_SetLockStateCustomerId_upcomingRental(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	ctx := context.Background()
+
+	mockCrud := mocks.NewMockICRUD(ctrl)
+	mockCrud.EXPECT().GetNextRental(ctx, vin2).Return(&rentalCrudUpcoming, nil)
+
+	mockCar := mocks.NewMockClientWithResponsesInterface(ctrl)
+
+	mockTime := mocks.NewMockITimeProvider(ctrl)
+
+	operations := NewOperations(mockCar, mockCrud, mockTime)
+	err := operations.SetLockStateCustomerId(ctx, model.LOCKED, vin2, exampleCustomerID)
+	assert.ErrorIs(t, err, rentalErrors.ErrTrunkAccessDenied)
+}
+
+func TestOperations_SetLockStateCustomerId_wrongCustomer(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	ctx := context.Background()
+
+	mockCrud := mocks.NewMockICRUD(ctrl)
+	mockCrud.EXPECT().GetNextRental(ctx, vin2).Return(&rentalCrud, nil)
+
+	mockCar := mocks.NewMockClientWithResponsesInterface(ctrl)
+
+	mockTime := mocks.NewMockITimeProvider(ctrl)
+
+	operations := NewOperations(mockCar, mockCrud, mockTime)
+	err := operations.SetLockStateCustomerId(ctx, model.LOCKED, vin2, "wrong customer")
+	assert.ErrorIs(t, err, rentalErrors.ErrTrunkAccessDenied)
+}
+
+func TestOperations_SetLockStateCustomerId_carNotFound(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	ctx := context.Background()
+
+	mockCrud := mocks.NewMockICRUD(ctrl)
+	mockCrud.EXPECT().GetNextRental(ctx, vin2).Return(&rentalCrud, nil)
+
+	mockCar := mocks.NewMockClientWithResponsesInterface(ctrl)
+	mockCar.EXPECT().ChangeTrunkLockStateWithResponse(ctx, vin2,
+		carTypes.DynamicDataLockState(model.LOCKED)).Return(&car.ChangeTrunkLockStateResponse{
+		HTTPResponse: &http.Response{
+			StatusCode: http.StatusNotFound,
+		},
+	}, nil)
+
+	mockTime := mocks.NewMockITimeProvider(ctrl)
+
+	operations := NewOperations(mockCar, mockCrud, mockTime)
+	err := operations.SetLockStateCustomerId(ctx, model.LOCKED, vin2, exampleCustomerID)
+	assert.ErrorIs(t, err, rentalErrors.ErrDomainAssertion)
+}
+
+func TestOperations_SetLockStateCustomerId_noActiveOrUpcomingRental(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	ctx := context.Background()
+
+	mockCrud := mocks.NewMockICRUD(ctrl)
+	mockCrud.EXPECT().GetNextRental(ctx, vin2).Return(nil, nil)
+
+	mockCar := mocks.NewMockClientWithResponsesInterface(ctrl)
+
+	mockTime := mocks.NewMockITimeProvider(ctrl)
+
+	operations := NewOperations(mockCar, mockCrud, mockTime)
+	err := operations.SetLockStateCustomerId(ctx, model.LOCKED, vin2, exampleCustomerID)
+	assert.ErrorIs(t, err, rentalErrors.ErrTrunkAccessDenied)
+}
+
+func TestOperations_SetLockStateCustomerId_domainError(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	ctx := context.Background()
+
+	mockCrud := mocks.NewMockICRUD(ctrl)
+	mockCrud.EXPECT().GetNextRental(ctx, vin2).Return(&rentalCrud, nil)
+
+	mockCar := mocks.NewMockClientWithResponsesInterface(ctrl)
+	domainError := errors.New("domain error")
+	mockCar.EXPECT().ChangeTrunkLockStateWithResponse(ctx, vin2,
+		carTypes.DynamicDataLockState(model.LOCKED)).Return(nil, domainError)
+
+	mockTime := mocks.NewMockITimeProvider(ctrl)
+
+	operations := NewOperations(mockCar, mockCrud, mockTime)
+	err := operations.SetLockStateCustomerId(ctx, model.LOCKED, vin2, exampleCustomerID)
+	assert.ErrorIs(t, err, domainError)
+}
+
+func TestOperations_SetLockStateCustomerId_unknownDomainResponse(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	ctx := context.Background()
+
+	mockCrud := mocks.NewMockICRUD(ctrl)
+	mockCrud.EXPECT().GetNextRental(ctx, vin2).Return(&rentalCrud, nil)
+
+	mockCar := mocks.NewMockClientWithResponsesInterface(ctrl)
+	mockCar.EXPECT().ChangeTrunkLockStateWithResponse(ctx, vin2,
+		carTypes.DynamicDataLockState(model.LOCKED)).Return(&car.ChangeTrunkLockStateResponse{
+		HTTPResponse: &http.Response{
+			StatusCode: http.StatusTeapot,
+		},
+	}, nil)
+
+	mockTime := mocks.NewMockITimeProvider(ctrl)
+
+	operations := NewOperations(mockCar, mockCrud, mockTime)
+	err := operations.SetLockStateCustomerId(ctx, model.LOCKED, vin2, exampleCustomerID)
+	assert.ErrorIs(t, err, rentalErrors.ErrDomainAssertion)
+}
+
+func TestOperations_SetLockStateTrunkAccessToken_success(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	ctx := context.Background()
+
+	mockCrud := mocks.NewMockICRUD(ctrl)
+	mockCrud.EXPECT().GetTrunkAccess(ctx, vin2, rentalCrud.Token.Token).Return(rentalCrud.Token, nil)
+
+	mockTime := mocks.NewMockITimeProvider(ctrl)
+	mockTime.EXPECT().Now().Return(time.Date(2023, 3, 2, 5, 0, 0, 0, time.UTC))
+
+	mockCar := mocks.NewMockClientWithResponsesInterface(ctrl)
+	mockCar.EXPECT().ChangeTrunkLockStateWithResponse(ctx, vin2,
+		carTypes.DynamicDataLockState(model.LOCKED)).Return(&car.ChangeTrunkLockStateResponse{
+		HTTPResponse: &http.Response{
+			StatusCode: http.StatusNoContent,
+		},
+	}, nil)
+
+	operations := NewOperations(mockCar, mockCrud, mockTime)
+	err := operations.SetLockStateTrunkAccessToken(ctx, model.LOCKED, vin2, rentalCrud.Token.Token)
+	assert.Nil(t, err)
+}
+
+func TestOperations_SetLockStateTrunkAccessToken_crudError(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	ctx := context.Background()
+
+	mockCrud := mocks.NewMockICRUD(ctrl)
+	crudError := errors.New("crud error")
+	mockCrud.EXPECT().GetTrunkAccess(ctx, vin2, rentalCrud.Token.Token).Return(nil, crudError)
+
+	mockCar := mocks.NewMockClientWithResponsesInterface(ctrl)
+
+	mockTime := mocks.NewMockITimeProvider(ctrl)
+
+	operations := NewOperations(mockCar, mockCrud, mockTime)
+	err := operations.SetLockStateTrunkAccessToken(ctx, model.LOCKED, vin2, rentalCrud.Token.Token)
+	assert.ErrorIs(t, err, crudError)
+}
+
+func TestOperations_SetLockStateTrunkAccessToken_validInFutureTrunkAccess(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	ctx := context.Background()
+
+	mockCrud := mocks.NewMockICRUD(ctrl)
+	mockCrud.EXPECT().GetTrunkAccess(ctx, vin2, rentalCrudUpcoming.Token.Token).Return(rentalCrudUpcoming.Token, nil)
+
+	mockCar := mocks.NewMockClientWithResponsesInterface(ctrl)
+
+	mockTime := mocks.NewMockITimeProvider(ctrl)
+	mockTime.EXPECT().Now().Return(time.Date(1900, 3, 2, 5, 0, 0, 0, time.UTC))
+
+	operations := NewOperations(mockCar, mockCrud, mockTime)
+	err := operations.SetLockStateTrunkAccessToken(ctx, model.LOCKED, vin2, rentalCrud.Token.Token)
+	assert.ErrorIs(t, err, rentalErrors.ErrTrunkAccessDenied)
+}
+
+func TestOperations_SetLockStateTrunkAccessToken_validInPastTrunkAccess(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	ctx := context.Background()
+
+	mockCrud := mocks.NewMockICRUD(ctrl)
+	mockCrud.EXPECT().GetTrunkAccess(ctx, vin2, rentalCrudExpired.Token.Token).Return(rentalCrudExpired.Token, nil)
+
+	mockCar := mocks.NewMockClientWithResponsesInterface(ctrl)
+
+	mockTime := mocks.NewMockITimeProvider(ctrl)
+	mockTime.EXPECT().Now().Return(time.Date(2100, 3, 2, 5, 0, 0, 0, time.UTC))
+
+	operations := NewOperations(mockCar, mockCrud, mockTime)
+	err := operations.SetLockStateTrunkAccessToken(ctx, model.LOCKED, vin2, rentalCrud.Token.Token)
+	assert.ErrorIs(t, err, rentalErrors.ErrTrunkAccessDenied)
+}
+
+func TestOperations_SetLockStateTrunkAccessToken_carNotFound(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	ctx := context.Background()
+
+	mockCrud := mocks.NewMockICRUD(ctrl)
+	mockCrud.EXPECT().GetTrunkAccess(ctx, vin2, rentalCrud.Token.Token).Return(rentalCrud.Token, nil)
+
+	mockTime := mocks.NewMockITimeProvider(ctrl)
+	mockTime.EXPECT().Now().Return(time.Date(2023, 3, 2, 5, 0, 0, 0, time.UTC))
+
+	mockCar := mocks.NewMockClientWithResponsesInterface(ctrl)
+	mockCar.EXPECT().ChangeTrunkLockStateWithResponse(ctx, vin2,
+		carTypes.DynamicDataLockState(model.LOCKED)).Return(&car.ChangeTrunkLockStateResponse{
+		HTTPResponse: &http.Response{
+			StatusCode: http.StatusNotFound,
+		},
+	}, nil)
+
+	operations := NewOperations(mockCar, mockCrud, mockTime)
+	err := operations.SetLockStateTrunkAccessToken(ctx, model.LOCKED, vin2, rentalCrud.Token.Token)
+	assert.ErrorIs(t, err, rentalErrors.ErrDomainAssertion)
+}
+
+func TestOperations_SetLockStateTrunkAccessToken_domainError(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	ctx := context.Background()
+
+	mockCrud := mocks.NewMockICRUD(ctrl)
+	mockCrud.EXPECT().GetTrunkAccess(ctx, vin2, rentalCrud.Token.Token).Return(rentalCrud.Token, nil)
+
+	mockTime := mocks.NewMockITimeProvider(ctrl)
+	mockTime.EXPECT().Now().Return(time.Date(2023, 3, 2, 5, 0, 0, 0, time.UTC))
+
+	mockCar := mocks.NewMockClientWithResponsesInterface(ctrl)
+	domainError := errors.New("domain error")
+	mockCar.EXPECT().ChangeTrunkLockStateWithResponse(ctx, vin2,
+		carTypes.DynamicDataLockState(model.LOCKED)).Return(nil, domainError)
+
+	operations := NewOperations(mockCar, mockCrud, mockTime)
+	err := operations.SetLockStateTrunkAccessToken(ctx, model.LOCKED, vin2, rentalCrud.Token.Token)
+	assert.ErrorIs(t, err, domainError)
+}
+
+func TestOperations_SetLockStateTrunkAccessToken_unknownDomainResponse(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	ctx := context.Background()
+
+	mockCrud := mocks.NewMockICRUD(ctrl)
+	mockCrud.EXPECT().GetTrunkAccess(ctx, vin2, rentalCrud.Token.Token).Return(rentalCrud.Token, nil)
+
+	mockTime := mocks.NewMockITimeProvider(ctrl)
+	mockTime.EXPECT().Now().Return(time.Date(2023, 3, 2, 5, 0, 0, 0, time.UTC))
+
+	mockCar := mocks.NewMockClientWithResponsesInterface(ctrl)
+	mockCar.EXPECT().ChangeTrunkLockStateWithResponse(ctx, vin2,
+		carTypes.DynamicDataLockState(model.LOCKED)).Return(&car.ChangeTrunkLockStateResponse{
+		HTTPResponse: &http.Response{
+			StatusCode: http.StatusTeapot,
+		},
+	}, nil)
+
+	operations := NewOperations(mockCar, mockCrud, mockTime)
+	err := operations.SetLockStateTrunkAccessToken(ctx, model.LOCKED, vin2, rentalCrud.Token.Token)
+	assert.ErrorIs(t, err, rentalErrors.ErrDomainAssertion)
 }

@@ -58,7 +58,7 @@ func newApp(config *Config, dbConnection db.IConnection, dbConfig *db.Config) (*
 	}
 
 	crudInstance := database.NewICRUD(dbConnection, dbConfig, util.TimeProvider{})
-	operationsInstance := operations.NewOperations(carClient, crudInstance)
+	operationsInstance := operations.NewOperations(carClient, crudInstance, util.TimeProvider{})
 	controllerInstance := api.NewController(operationsInstance, util.TimeProvider{})
 
 	api.RegisterHandlers(app, controllerInstance)

@@ -11,5 +11,6 @@ var (
 	ErrRentalNotActive         = errors.New("rental not active")
 	ErrRentalNotOverlapping    = errors.New("rental does not overlap the requested time period")
 	// ErrResourceConflict is returned when a resource is already in use and retry attempts failed.
-	ErrResourceConflict = errors.New("resource conflict")
+	ErrResourceConflict  = errors.New("resource conflict")
+	ErrTrunkAccessDenied = errors.New("trunk access denied")
 )

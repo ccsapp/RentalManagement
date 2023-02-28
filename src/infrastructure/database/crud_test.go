@@ -1469,7 +1469,8 @@ func TestCrud_GetRental_success(t *testing.T) {
 			"rentals",
 			factory.FilterEqual("rentals.rentalId", rentalId),
 			1,
-			nil),
+			nil,
+		),
 		gomock.Any(),
 	).SetArg(3, cars).Return(nil)
 
@@ -1667,4 +1668,130 @@ func TestCrud_GetNextRental_databaseError(t *testing.T) {
 
 	assert.ErrorIs(t, err, dbError)
 	assert.Nil(t, returnedRental)
+}
+
+func TestCrud_GetTrunkAccess_success(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	ctx := context.Background()
+
+	mockConnection := mocks.NewMockIConnection(ctrl)
+
+	factory := db.PseudoFactory{}
+
+	token := "bumrLuCMbumrLuCMbumrLuCM"
+	vin := "WVWAA71K08W201030"
+
+	var car = entities.Car{
+		Vin: vin,
+		Rentals: []entities.Rental{
+			{
+				RentalId:   "rZ6IIwcD",
+				CustomerId: "jJ8mNg6Z",
+				RentalPeriod: entities.TimePeriod{
+					EndDate:   time.Date(2023, 4, 3, 1, 0, 0, 0, time.UTC),
+					StartDate: time.Date(2023, 3, 2, 3, 0, 0, 0, time.UTC),
+				},
+				TrunkToken: &entities.TrunkAccessToken{
+					Token: token,
+					ValidityPeriod: entities.TimePeriod{
+						EndDate:   time.Date(2023, 2, 3, 1, 0, 0, 0, time.UTC),
+						StartDate: time.Date(2023, 2, 2, 3, 0, 0, 0, time.UTC),
+					},
+				},
+			},
+		},
+	}
+
+	var access = model.TrunkAccess{
+		Token: "bumrLuCMbumrLuCMbumrLuCM",
+		ValidityPeriod: model.TimePeriod{
+			EndDate:   time.Date(2023, 2, 3, 1, 0, 0, 0, time.UTC),
+			StartDate: time.Date(2023, 2, 2, 3, 0, 0, 0, time.UTC),
+		},
+	}
+
+	var cars = []entities.Car{car}
+
+	var currentDate = time.Date(2023, 4, 1, 0, 0, 0, 0, time.UTC)
+	mockTimeProvider := mocks.NewMockITimeProvider(ctrl)
+	mockTimeProvider.EXPECT().Now().Return(currentDate)
+
+	mockConnection.EXPECT().GetFactory().Return(&factory)
+	mockConnection.EXPECT().Aggregate(
+		ctx,
+		collectionPrefix+CollectionBaseName,
+		factory.ArrayFilterAggregation(
+			"rentals",
+			factory.FilterAnd(
+				factory.FilterEqual("rentals.trunkToken.token", token),
+				factory.FilterEqual("_id", vin),
+			),
+			1,
+			nil,
+		),
+		gomock.Any(),
+	).SetArg(3, cars).Return(nil)
+
+	crud := NewICRUD(mockConnection, dbConfig, mockTimeProvider)
+	returnedAccess, err := crud.GetTrunkAccess(ctx, vin, token)
+
+	assert.Nil(t, err)
+	assert.Equal(t, &access, returnedAccess)
+}
+
+func TestCrud_GetTrunkAccess_trunkAccessDenied(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	ctx := context.Background()
+	factory := db.PseudoFactory{}
+	token := "not token"
+	vin := "WVWAA71K08W201030"
+
+	mockConnection := mocks.NewMockIConnection(ctrl)
+	mockTimeProvider := mocks.NewMockITimeProvider(ctrl)
+
+	mockConnection.EXPECT().GetFactory().Return(&factory)
+	mockConnection.EXPECT().Aggregate(
+		ctx,
+		collectionPrefix+CollectionBaseName,
+		gomock.Any(),
+		gomock.Any(),
+	).SetArg(3, []entities.Car{}).Return(nil)
+
+	crud := NewICRUD(mockConnection, dbConfig, mockTimeProvider)
+	returnedAccess, err := crud.GetTrunkAccess(ctx, vin, token)
+
+	assert.ErrorIs(t, err, rentalErrors.ErrTrunkAccessDenied)
+	assert.Nil(t, returnedAccess)
+}
+
+func TestCrud_GetTrunkAccess_databaseError(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	ctx := context.Background()
+	factory := db.PseudoFactory{}
+	dbError := errors.New("db error")
+	token := "bumrLuCMbumrLuCMbumrLuCM"
+	vin := "WVWAA71K08W201030"
+
+	mockConnection := mocks.NewMockIConnection(ctrl)
+	mockTimeProvider := mocks.NewMockITimeProvider(ctrl)
+
+	mockConnection.EXPECT().GetFactory().Return(&factory)
+	mockConnection.EXPECT().Aggregate(
+		ctx,
+		collectionPrefix+CollectionBaseName,
+		gomock.Any(),
+		gomock.Any(),
+	).Return(dbError)
+
+	crud := NewICRUD(mockConnection, dbConfig, mockTimeProvider)
+	returnedAccess, err := crud.GetTrunkAccess(ctx, vin, token)
+
+	assert.ErrorIs(t, err, dbError)
+	assert.Nil(t, returnedAccess)
 }

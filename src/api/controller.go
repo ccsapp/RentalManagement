@@ -92,14 +92,60 @@ func (c controller) CreateRental(ctx echo.Context, vin model.VinParam, params mo
 	return ctx.NoContent(http.StatusCreated)
 }
 
-func (c controller) GetLockState(echo.Context, model.VinParam, model.GetLockStateParams) error {
-	// TODO implement me
-	panic("implement me")
+func (c controller) GetLockState(ctx echo.Context, vin model.VinParam, params model.GetLockStateParams) error {
+	lockState, err := c.operations.GetLockState(ctx.Request().Context(), vin, params.TrunkAccessToken)
+
+	if errors.Is(err, rentalErrors.ErrTrunkAccessDenied) {
+		return echo.NewHTTPError(http.StatusForbidden, "trunk access denied")
+	}
+
+	if err != nil {
+		return err
+	}
+
+	lockStateObject := model.LockStateObject{
+		TrunkLockState: *lockState,
+	}
+
+	return ctx.JSON(http.StatusOK, lockStateObject)
 }
 
-func (c controller) SetLockState(echo.Context, model.VinParam, model.SetLockStateParams) error {
-	// TODO implement me
-	panic("implement me")
+func (c controller) SetLockState(ctx echo.Context, vin model.VinParam, params model.SetLockStateParams) error {
+	if params.CustomerId == nil && params.TrunkAccessToken == nil {
+		return echo.NewHTTPError(http.StatusBadRequest, "either customerId or trunkAccessToken must be specified")
+	}
+
+	if params.CustomerId != nil && params.TrunkAccessToken != nil {
+		return echo.NewHTTPError(http.StatusBadRequest, "only one of customerId or trunkAccessToken can be specified")
+	}
+
+	var lockStateObject model.LockStateObject
+
+	// bind errors are unexpected because the trunkLockState is validated by the Swagger spec
+	err := ctx.Bind(&lockStateObject)
+
+	if err != nil {
+		return err
+	}
+
+	lockState := lockStateObject.TrunkLockState
+
+	if params.CustomerId != nil {
+		err = c.operations.SetLockStateCustomerId(ctx.Request().Context(), lockState, vin, *params.CustomerId)
+	} else if params.TrunkAccessToken != nil {
+		err = c.operations.SetLockStateTrunkAccessToken(ctx.Request().Context(), lockState,
+			vin, *params.TrunkAccessToken)
+	}
+
+	if errors.Is(err, rentalErrors.ErrTrunkAccessDenied) {
+		return echo.NewHTTPError(http.StatusForbidden, "trunk access denied")
+	}
+
+	if err != nil {
+		return err
+	}
+
+	return ctx.NoContent(http.StatusNoContent)
 }
 
 func (c controller) GetOverview(ctx echo.Context, params model.GetOverviewParams) error {

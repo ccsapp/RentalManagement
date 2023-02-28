@@ -189,7 +189,7 @@ func TestController_GetAvailableCars_InvalidTimePeriod(t *testing.T) {
 	controller := NewController(mockOperations, mockTime)
 	err := controller.GetAvailableCars(mockEchoContext, model.GetAvailableCarsParams{TimePeriod: invalidTimePeriod})
 
-	assert.Equal(t, err, echo.NewHTTPError(http.StatusBadRequest, "startDate must be before endDate"))
+	assert.Equal(t, echo.NewHTTPError(http.StatusBadRequest, "startDate must be before endDate"), err)
 }
 
 func TestController_GetCar_success(t *testing.T) {
@@ -254,7 +254,7 @@ func TestController_GetCar_NotFound(t *testing.T) {
 
 	controller := NewController(mockOperations, mockTime)
 	err := controller.GetCar(mockEchoContext, testdata.VinCar)
-	assert.Equal(t, err, echo.NewHTTPError(http.StatusNotFound, "car not found"))
+	assert.Equal(t, echo.NewHTTPError(http.StatusNotFound, "car not found"), err)
 }
 
 func TestController_GetNextRental_success_exists(t *testing.T) {
@@ -319,7 +319,7 @@ func TestController_GetNextRental_UnknownCar(t *testing.T) {
 
 	controller := NewController(mockOperations, mockTime)
 	err := controller.GetNextRental(mockEchoContext, testdata.VinCar)
-	assert.Equal(t, err, echo.NewHTTPError(http.StatusNotFound, "car not found"))
+	assert.Equal(t, echo.NewHTTPError(http.StatusNotFound, "car not found"), err)
 }
 
 func TestController_GetNextRental_OperationsError(t *testing.T) {
@@ -417,7 +417,7 @@ func TestController_CreateRental_CarNotFound(t *testing.T) {
 	controller := NewController(mockOperations, mockTime)
 	err := controller.CreateRental(mockEchoContext, testdata.VinCar,
 		model.CreateRentalParams{CustomerId: exampleCustomerID})
-	assert.Equal(t, err, echo.NewHTTPError(http.StatusNotFound, "car not found"))
+	assert.Equal(t, echo.NewHTTPError(http.StatusNotFound, "car not found"), err)
 }
 
 func TestController_CreateRental_invalidTimePeriod(t *testing.T) {
@@ -435,7 +435,7 @@ func TestController_CreateRental_invalidTimePeriod(t *testing.T) {
 	err := controller.CreateRental(mockEchoContext, testdata.VinCar,
 		model.CreateRentalParams{CustomerId: exampleCustomerID})
 
-	assert.Equal(t, err, echo.NewHTTPError(http.StatusBadRequest, "startDate must be before endDate"))
+	assert.Equal(t, echo.NewHTTPError(http.StatusBadRequest, "startDate must be before endDate"), err)
 }
 
 func TestController_CreateRental_Past(t *testing.T) {
@@ -454,7 +454,7 @@ func TestController_CreateRental_Past(t *testing.T) {
 	err := controller.CreateRental(mockEchoContext, testdata.VinCar,
 		model.CreateRentalParams{CustomerId: exampleCustomerID})
 
-	assert.Equal(t, err, echo.NewHTTPError(http.StatusForbidden, "startDate must be in the future"))
+	assert.Equal(t, echo.NewHTTPError(http.StatusForbidden, "startDate must be in the future"), err)
 }
 
 func TestController_CreateRental_ConflictingRental(t *testing.T) {
@@ -480,7 +480,7 @@ func TestController_CreateRental_ConflictingRental(t *testing.T) {
 	err := controller.CreateRental(mockEchoContext, testdata.VinCar,
 		model.CreateRentalParams{CustomerId: exampleCustomerID})
 
-	assert.Equal(t, err, echo.NewHTTPError(http.StatusConflict, "conflicting rental exists"))
+	assert.Equal(t, echo.NewHTTPError(http.StatusConflict, "conflicting rental exists"), err)
 }
 
 func TestController_GetOverview_success(t *testing.T) {
@@ -565,7 +565,7 @@ func TestController_GrantTrinkAccess_invalidTimePeriod(t *testing.T) {
 	controller := NewController(mockOperations, mockTime)
 	err := controller.GrantTrunkAccess(mockContext, "rentalId")
 
-	assert.Equal(t, err, echo.NewHTTPError(http.StatusBadRequest, "startDate must be before endDate"))
+	assert.Equal(t, echo.NewHTTPError(http.StatusBadRequest, "startDate must be before endDate"), err)
 }
 
 func TestController_GrantTrunkAccess_rentalNotFound(t *testing.T) {
@@ -589,7 +589,7 @@ func TestController_GrantTrunkAccess_rentalNotFound(t *testing.T) {
 	controller := NewController(mockOperations, mockTime)
 	err := controller.GrantTrunkAccess(mockContext, "rentalId")
 
-	assert.Equal(t, err, echo.NewHTTPError(http.StatusNotFound, "rental not found"))
+	assert.Equal(t, echo.NewHTTPError(http.StatusNotFound, "rental not found"), err)
 }
 
 func TestController_GrantTrunkAccess_rentalNotActive(t *testing.T) {
@@ -613,7 +613,7 @@ func TestController_GrantTrunkAccess_rentalNotActive(t *testing.T) {
 	controller := NewController(mockOperations, mockTime)
 	err := controller.GrantTrunkAccess(mockContext, "rentalId")
 
-	assert.Equal(t, err, echo.NewHTTPError(http.StatusForbidden, "rental not active"))
+	assert.Equal(t, echo.NewHTTPError(http.StatusForbidden, "rental not active"), err)
 }
 
 func TestController_GrantTrunkAccess_rentalNotOverlapping(t *testing.T) {
@@ -637,7 +637,7 @@ func TestController_GrantTrunkAccess_rentalNotOverlapping(t *testing.T) {
 	controller := NewController(mockOperations, mockTime)
 	err := controller.GrantTrunkAccess(mockContext, "rentalId")
 
-	assert.Equal(t, err, echo.NewHTTPError(http.StatusForbidden, "rental not overlapping"))
+	assert.Equal(t, echo.NewHTTPError(http.StatusForbidden, "rental not overlapping"), err)
 }
 
 func TestController_GrantTrunkAccess_resourceConflict(t *testing.T) {
@@ -661,7 +661,7 @@ func TestController_GrantTrunkAccess_resourceConflict(t *testing.T) {
 	controller := NewController(mockOperations, mockTime)
 	err := controller.GrantTrunkAccess(mockContext, "rentalId")
 
-	assert.Equal(t, err, echo.NewHTTPError(http.StatusServiceUnavailable, "failed to grant trunk access"))
+	assert.Equal(t, echo.NewHTTPError(http.StatusServiceUnavailable, "failed to grant trunk access"), err)
 }
 
 func TestController_GrantTrunkAccess_operationsError(t *testing.T) {
@@ -730,7 +730,7 @@ func TestController_GetRentalStatus_RentalNotFound(t *testing.T) {
 	controller := NewController(mockOperations, mockTime)
 	err := controller.GetRentalStatus(mockContext, rentalCustomerShort1.Id)
 
-	assert.Equal(t, err, echo.NewHTTPError(http.StatusNotFound, "rentalId not found"))
+	assert.Equal(t, echo.NewHTTPError(http.StatusNotFound, "rentalId not found"), err)
 }
 
 func TestController_GetRentalStatus_operationsError(t *testing.T) {
@@ -753,4 +753,266 @@ func TestController_GetRentalStatus_operationsError(t *testing.T) {
 	controller := NewController(mockOperations, mockTime)
 	err := controller.GetRentalStatus(mockContext, rentalCustomerShort1.Id)
 	assert.ErrorIs(t, err, operationsError)
+}
+
+func TestController_GetLockState_success(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	ctx := context.Background()
+
+	request, _ := http.NewRequestWithContext(ctx, "GET", "", nil)
+
+	locked := model.LOCKED
+
+	mockContext := mocks.NewMockContext(ctrl)
+	mockContext.EXPECT().Request().Return(request)
+	mockContext.EXPECT().JSON(http.StatusOK, model.LockStateObject{TrunkLockState: locked})
+
+	mockOperations := mocks.NewMockIOperations(ctrl)
+	mockOperations.EXPECT().GetLockState(ctx, testdata.VinCar, testdata.TrunkAccessToken).Return(&locked, nil)
+
+	mockTime := mocks.NewMockITimeProvider(ctrl)
+
+	controller := NewController(mockOperations, mockTime)
+	err := controller.GetLockState(mockContext, testdata.VinCar, model.GetLockStateParams{TrunkAccessToken: testdata.TrunkAccessToken})
+	assert.Nil(t, err)
+}
+
+func TestController_GetLockState_TrunkAccessDenied(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	ctx := context.Background()
+
+	request, _ := http.NewRequestWithContext(ctx, "GET", "", nil)
+
+	mockContext := mocks.NewMockContext(ctrl)
+	mockContext.EXPECT().Request().Return(request)
+
+	mockOperations := mocks.NewMockIOperations(ctrl)
+
+	mockOperations.EXPECT().GetLockState(ctx, testdata.VinCar, testdata.TrunkAccessToken).Return(nil, rentalErrors.ErrTrunkAccessDenied)
+
+	mockTime := mocks.NewMockITimeProvider(ctrl)
+
+	controller := NewController(mockOperations, mockTime)
+	err := controller.GetLockState(mockContext, testdata.VinCar, model.GetLockStateParams{TrunkAccessToken: testdata.TrunkAccessToken})
+	assert.Equal(t, echo.NewHTTPError(http.StatusForbidden, "trunk access denied"), err)
+}
+
+func TestController_GetLockState_operationsError(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	ctx := context.Background()
+
+	request, _ := http.NewRequestWithContext(ctx, "GET", "", nil)
+
+	mockContext := mocks.NewMockContext(ctrl)
+	mockContext.EXPECT().Request().Return(request)
+
+	mockOperations := mocks.NewMockIOperations(ctrl)
+	operationsError := errors.New("operations error")
+	mockOperations.EXPECT().GetLockState(ctx, testdata.VinCar, testdata.TrunkAccessToken).Return(nil, operationsError)
+
+	mockTime := mocks.NewMockITimeProvider(ctrl)
+
+	controller := NewController(mockOperations, mockTime)
+	err := controller.GetLockState(mockContext, testdata.VinCar, model.GetLockStateParams{TrunkAccessToken: testdata.TrunkAccessToken})
+	assert.ErrorIs(t, err, operationsError)
+}
+
+func TestController_SetLockState_customerId_success(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	ctx := context.Background()
+
+	request, _ := http.NewRequestWithContext(ctx, "GET", "", nil)
+
+	mockContext := mocks.NewMockContext(ctrl)
+	mockContext.EXPECT().Request().Return(request)
+	mockContext.EXPECT().Bind(gomock.Any()).SetArg(0, model.LockStateObject{TrunkLockState: model.LOCKED}).Return(nil)
+	mockContext.EXPECT().NoContent(http.StatusNoContent)
+
+	mockOperations := mocks.NewMockIOperations(ctrl)
+	mockOperations.EXPECT().SetLockStateCustomerId(ctx, model.LOCKED, testdata.VinCar, exampleCustomerID).Return(nil)
+
+	mockTime := mocks.NewMockITimeProvider(ctrl)
+
+	controller := NewController(mockOperations, mockTime)
+	err := controller.SetLockState(mockContext, testdata.VinCar, model.SetLockStateParams{
+		CustomerId:       &exampleCustomerID,
+		TrunkAccessToken: nil,
+	})
+	assert.Nil(t, err)
+}
+
+func TestController_SetLockState_trunkAccessToken_success(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	ctx := context.Background()
+
+	request, _ := http.NewRequestWithContext(ctx, "GET", "", nil)
+
+	mockContext := mocks.NewMockContext(ctrl)
+	mockContext.EXPECT().Request().Return(request)
+	mockContext.EXPECT().Bind(gomock.Any()).SetArg(0, model.LockStateObject{TrunkLockState: model.LOCKED}).Return(nil)
+	mockContext.EXPECT().NoContent(http.StatusNoContent)
+
+	mockOperations := mocks.NewMockIOperations(ctrl)
+	mockOperations.EXPECT().SetLockStateTrunkAccessToken(ctx, model.LOCKED, testdata.VinCar, testdata.TrunkAccessToken).Return(nil)
+
+	mockTime := mocks.NewMockITimeProvider(ctrl)
+
+	controller := NewController(mockOperations, mockTime)
+	token := testdata.TrunkAccessToken
+	err := controller.SetLockState(mockContext, testdata.VinCar, model.SetLockStateParams{
+		CustomerId:       nil,
+		TrunkAccessToken: &token,
+	})
+	assert.Nil(t, err)
+}
+
+func TestController_SetLockState_customerId_TrunkAccessDenied(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	ctx := context.Background()
+
+	request, _ := http.NewRequestWithContext(ctx, "GET", "", nil)
+
+	mockContext := mocks.NewMockContext(ctrl)
+	mockContext.EXPECT().Request().Return(request)
+	mockContext.EXPECT().Bind(gomock.Any()).SetArg(0, model.LockStateObject{TrunkLockState: model.LOCKED}).Return(nil)
+
+	mockOperations := mocks.NewMockIOperations(ctrl)
+	mockOperations.EXPECT().SetLockStateCustomerId(ctx, model.LOCKED, testdata.VinCar, exampleCustomerID).Return(rentalErrors.ErrTrunkAccessDenied)
+
+	mockTime := mocks.NewMockITimeProvider(ctrl)
+
+	controller := NewController(mockOperations, mockTime)
+	err := controller.SetLockState(mockContext, testdata.VinCar, model.SetLockStateParams{
+		CustomerId:       &exampleCustomerID,
+		TrunkAccessToken: nil,
+	})
+	assert.Equal(t, echo.NewHTTPError(http.StatusForbidden, "trunk access denied"), err)
+}
+
+func TestController_SetLockState_trunkAccessToken_TrunkAccessDenied(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	ctx := context.Background()
+
+	request, _ := http.NewRequestWithContext(ctx, "GET", "", nil)
+
+	mockContext := mocks.NewMockContext(ctrl)
+	mockContext.EXPECT().Request().Return(request)
+	mockContext.EXPECT().Bind(gomock.Any()).SetArg(0, model.LockStateObject{TrunkLockState: model.LOCKED}).Return(nil)
+
+	mockOperations := mocks.NewMockIOperations(ctrl)
+	mockOperations.EXPECT().SetLockStateTrunkAccessToken(ctx, model.LOCKED, testdata.VinCar, testdata.TrunkAccessToken).Return(rentalErrors.ErrTrunkAccessDenied)
+
+	mockTime := mocks.NewMockITimeProvider(ctrl)
+
+	controller := NewController(mockOperations, mockTime)
+	token := testdata.TrunkAccessToken
+	err := controller.SetLockState(mockContext, testdata.VinCar, model.SetLockStateParams{
+		CustomerId:       nil,
+		TrunkAccessToken: &token,
+	})
+	assert.Equal(t, echo.NewHTTPError(http.StatusForbidden, "trunk access denied"), err)
+}
+
+func TestController_SetLockState_NoParameter(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	mockContext := mocks.NewMockContext(ctrl)
+
+	mockOperations := mocks.NewMockIOperations(ctrl)
+
+	mockTime := mocks.NewMockITimeProvider(ctrl)
+
+	controller := NewController(mockOperations, mockTime)
+	err := controller.SetLockState(mockContext, testdata.VinCar, model.SetLockStateParams{
+		CustomerId:       nil,
+		TrunkAccessToken: nil,
+	})
+	assert.Equal(t, echo.NewHTTPError(http.StatusBadRequest, "either customerId or trunkAccessToken must be specified"), err)
+}
+
+func TestController_SetLockState_TooManyParameters(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	mockContext := mocks.NewMockContext(ctrl)
+
+	mockOperations := mocks.NewMockIOperations(ctrl)
+
+	mockTime := mocks.NewMockITimeProvider(ctrl)
+
+	controller := NewController(mockOperations, mockTime)
+	token := testdata.TrunkAccessToken
+	err := controller.SetLockState(mockContext, testdata.VinCar, model.SetLockStateParams{
+		CustomerId:       &exampleCustomerID,
+		TrunkAccessToken: &token,
+	})
+	assert.Equal(t, echo.NewHTTPError(http.StatusBadRequest, "only one of customerId or trunkAccessToken can be specified"), err)
+}
+
+func TestController_SetLockState_customerId_OperationsError(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	ctx := context.Background()
+
+	request, _ := http.NewRequestWithContext(ctx, "GET", "", nil)
+
+	mockContext := mocks.NewMockContext(ctrl)
+	mockContext.EXPECT().Request().Return(request)
+	mockContext.EXPECT().Bind(gomock.Any()).SetArg(0, model.LockStateObject{TrunkLockState: model.LOCKED}).Return(nil)
+
+	mockOperations := mocks.NewMockIOperations(ctrl)
+	operationsError := errors.New("operations error")
+	mockOperations.EXPECT().SetLockStateCustomerId(ctx, model.LOCKED, testdata.VinCar, exampleCustomerID).Return(operationsError)
+
+	mockTime := mocks.NewMockITimeProvider(ctrl)
+
+	controller := NewController(mockOperations, mockTime)
+	err := controller.SetLockState(mockContext, testdata.VinCar, model.SetLockStateParams{
+		CustomerId:       &exampleCustomerID,
+		TrunkAccessToken: nil,
+	})
+	assert.ErrorIs(t, operationsError, err)
+}
+
+func TestController_SetLockState_trunkAccessToken_OperationsError(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	ctx := context.Background()
+
+	request, _ := http.NewRequestWithContext(ctx, "GET", "", nil)
+
+	mockContext := mocks.NewMockContext(ctrl)
+	mockContext.EXPECT().Request().Return(request)
+	mockContext.EXPECT().Bind(gomock.Any()).SetArg(0, model.LockStateObject{TrunkLockState: model.LOCKED}).Return(nil)
+
+	mockOperations := mocks.NewMockIOperations(ctrl)
+	operationsError := errors.New("operations error")
+	mockOperations.EXPECT().SetLockStateTrunkAccessToken(ctx, model.LOCKED, testdata.VinCar, testdata.TrunkAccessToken).Return(operationsError)
+
+	mockTime := mocks.NewMockITimeProvider(ctrl)
+
+	controller := NewController(mockOperations, mockTime)
+	token := testdata.TrunkAccessToken
+	err := controller.SetLockState(mockContext, testdata.VinCar, model.SetLockStateParams{
+		CustomerId:       nil,
+		TrunkAccessToken: &token,
+	})
+	assert.ErrorIs(t, operationsError, err)
 }

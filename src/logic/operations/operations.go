@@ -9,18 +9,22 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	carTypes "git.scc.kit.edu/cm-tm/cm-team/projectwork/pse/domain/d-cargotypes.git"
 	"net/http"
 )
 
 type operations struct {
-	carClient car.ClientWithResponsesInterface
-	crud      database.ICRUD
+	carClient    car.ClientWithResponsesInterface
+	crud         database.ICRUD
+	timeProvider util.ITimeProvider
 }
 
-func NewOperations(carClient car.ClientWithResponsesInterface, crud database.ICRUD) IOperations {
+func NewOperations(carClient car.ClientWithResponsesInterface, crud database.ICRUD,
+	timeProvider util.ITimeProvider) IOperations {
 	return &operations{
-		carClient: carClient,
-		crud:      crud,
+		carClient:    carClient,
+		crud:         crud,
+		timeProvider: timeProvider,
 	}
 }
 
@@ -86,7 +90,8 @@ func (o *operations) GetNextRental(ctx context.Context, vin model.Vin) (*model.R
 	return &nextRental, nil
 }
 
-func (o *operations) CreateRental(ctx context.Context, vin model.Vin, customerID model.CustomerId, timePeriod model.TimePeriod) error {
+func (o *operations) CreateRental(ctx context.Context, vin model.Vin, customerID model.CustomerId,
+	timePeriod model.TimePeriod) error {
 	if err := o.ensureCarExists(ctx, vin); err != nil {
 		return err
 	}
@@ -196,4 +201,75 @@ func (o *operations) GetRentalStatus(ctx context.Context, rentalId model.RentalI
 	}
 
 	return &rentalReturn, nil
+}
+
+func (o *operations) GetLockState(ctx context.Context, vin model.Vin, token model.TrunkAccessToken) (*model.LockState,
+	error) {
+
+	access, err := o.crud.GetTrunkAccess(ctx, vin, token)
+	if err != nil {
+		return nil, err
+	}
+	now := o.timeProvider.Now()
+	if access.ValidityPeriod.EndDate.Before(now) || access.ValidityPeriod.StartDate.After(now) {
+		return nil, rentalErrors.ErrTrunkAccessDenied
+	}
+
+	carResponse, err := o.carClient.GetCarWithResponse(ctx, vin)
+	if err != nil {
+		return nil, err
+	}
+
+	statusCode := carResponse.StatusCode()
+	if statusCode == http.StatusNotFound {
+		return nil, fmt.Errorf("%w: car %s not in domain",
+			rentalErrors.ErrDomainAssertion, vin)
+	}
+	if carResponse.ParsedCar == nil {
+		return nil, fmt.Errorf("%w: unknown error (domain code %d)",
+			rentalErrors.ErrDomainAssertion, statusCode)
+	}
+	lockState := car.MapToCar(carResponse.ParsedCar).DynamicData.TrunkLockState
+
+	return &lockState, nil
+}
+
+func (o *operations) SetLockStateCustomerId(ctx context.Context, lockState model.LockState, vin model.Vin,
+	customerId model.CustomerId) error {
+
+	rental, err := o.crud.GetNextRental(ctx, vin)
+	if err != nil {
+		return err
+	}
+	if rental == nil || rental.Customer.CustomerId != customerId || rental.State != model.ACTIVE {
+		return rentalErrors.ErrTrunkAccessDenied
+	}
+
+	return o.setLockState(ctx, lockState, vin)
+}
+
+func (o *operations) SetLockStateTrunkAccessToken(ctx context.Context, lockState model.LockState, vin model.Vin,
+	token model.TrunkAccessToken) error {
+
+	access, err := o.crud.GetTrunkAccess(ctx, vin, token)
+	if err != nil {
+		return err
+	}
+	now := o.timeProvider.Now()
+	if access.ValidityPeriod.EndDate.Before(now) || access.ValidityPeriod.StartDate.After(now) {
+		return rentalErrors.ErrTrunkAccessDenied
+	}
+
+	return o.setLockState(ctx, lockState, vin)
+}
+
+func (o *operations) setLockState(ctx context.Context, lockState model.LockState, vin model.Vin) error {
+	response, err := o.carClient.ChangeTrunkLockStateWithResponse(ctx, vin, carTypes.DynamicDataLockState(lockState))
+	if err != nil {
+		return err
+	}
+	if response.HTTPResponse.StatusCode != http.StatusNoContent {
+		return rentalErrors.ErrDomainAssertion
+	}
+	return nil
 }
