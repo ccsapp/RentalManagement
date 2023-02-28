@@ -40,6 +40,9 @@ type ICRUD interface {
 	GetRental(ctx context.Context, rentalId model.RentalId) (*model.Rental, error)
 	// GetNextRental returns the active or next upcoming rental of a car. If there is no next rental, nil is returned.
 	GetNextRental(ctx context.Context, vin model.Vin) (*model.Rental, error)
+	// GetTrunkAccess returns the trunk access token of a rental.
+	// If token is not registered with the car with the provided vin, rentalErrors.ErrTrunkAccessDenied is returned.
+	GetTrunkAccess(ctx context.Context, vin model.Vin, token model.TrunkAccessToken) (*model.TrunkAccess, error)
 }
 
 type crud struct {
@@ -294,4 +297,36 @@ func (c *crud) GetNextRental(ctx context.Context, vin model.Vin) (*model.Rental,
 	rental := mappers.MapCarsFromDbToRentals(&cars, c.timeProvider)
 
 	return &rental[0], nil
+}
+
+func (c *crud) GetTrunkAccess(ctx context.Context, vin model.Vin, token model.TrunkAccessToken) (*model.TrunkAccess,
+	error) {
+
+	var cars []entities.Car
+
+	factory := c.db.GetFactory()
+
+	err := c.db.Aggregate(
+		ctx, c.collection, factory.ArrayFilterAggregation(
+			"rentals",
+			factory.FilterAnd(
+				factory.FilterEqual("rentals.trunkToken.token", token),
+				factory.FilterEqual("_id", vin),
+			),
+			1,
+			nil,
+		),
+		&cars,
+	)
+
+	if err != nil {
+		return nil, err
+	}
+
+	if len(cars) == 0 {
+		return nil, rentalErrors.ErrTrunkAccessDenied
+	}
+
+	rentals := mappers.MapCarFromDbToRentals(&cars[0], c.timeProvider)
+	return rentals[0].Token, nil
 }

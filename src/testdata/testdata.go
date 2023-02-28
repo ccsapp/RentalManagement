@@ -17,6 +17,14 @@ var ExampleCarStaticResponse string
 
 const VinCar2 string = "1FVNY5Y90HP312888"
 
+//go:embed locked.json
+var Locked string
+
+//go:embed unlocked.json
+var Unlocked string
+
+const TrunkAccessToken = "bumrLuCMbumrLuCMbumrLuCM"
+
 //go:embed carsAvailableFirst.json
 var CarsAvailableFirst string
 

@@ -116,8 +116,6 @@ paths:
                 $ref: '#/components/schemas/lockStateObject'
         '400':
           $ref: '#/components/responses/trunkTokenOrVinInvalid'
-        '404':
-          $ref: '#/components/responses/trunkTokenOrVinUnknown'
         '403':
           $ref: '#/components/responses/noPermission'
     put:
@@ -143,8 +141,6 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/genericError'
-        '404':
-          $ref: '#/components/responses/trunkPermissionOrVinUnknown'
         '403':
           $ref: '#/components/responses/noPermission'
 
@@ -600,18 +596,6 @@ components:
         application/json:
           schema:
             $ref: '#/components/schemas/genericError'
-    trunkPermissionOrVinUnknown:
-      description: The token/customer or car with the given VIN is unknown to the system.
-      content:
-        application/json:
-          schema:
-            $ref: '#/components/schemas/genericError'
-    trunkTokenOrVinUnknown:
-      description: The token or car with the given VIN is unknown to the system.
-      content:
-        application/json:
-          schema:
-            $ref: '#/components/schemas/genericError'
     timePeriodInvalid:
       description: The time period has an invalid format. A technical error message useful for debugging is provided in the response body.
       content:
@@ -631,7 +615,7 @@ components:
           schema:
             $ref: '#/components/schemas/genericError'
     noPermission:
-      description: The user does not have appropriate permissions to perform the operation
+      description: The user does not have appropriate permissions to perform the operation.
       content:
         application/json:
           schema:

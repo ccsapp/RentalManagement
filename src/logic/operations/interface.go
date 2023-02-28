@@ -21,7 +21,6 @@ type IOperations interface {
 	GetOverview(ctx context.Context, customerID model.CustomerId) (*[]model.Rental, error)
 	// GetRentalStatus Get Rental Status Information (Including Car Data) based on an ID
 	GetRentalStatus(ctx context.Context, rentalId model.RentalId) (*model.Rental, error)
-
 	// GrantTrunkAccess Generate a new Trunk Access Token and replace the old one of the rental
 	// with given rentalId with it, if present. The new access token is returned.
 	// Returns rentalErrors.ErrRentalNotFound if the rental does not exist.
@@ -30,4 +29,17 @@ type IOperations interface {
 	// Returns rentalErrors.ErrResourceConflict if the resource is already in use and retry attempts failed.
 	GrantTrunkAccess(ctx context.Context, rentalId model.RentalId, timePeriod model.TimePeriod) (
 		*model.TrunkAccess, error)
+	// GetLockState Get TrunkLockState of a Car if valid token is provided
+	// Returns rentalErrors.ErrTrunkAccessDenied if the token is not valid
+	// Returns rentalErrors.ErrDomainAssertion if communication with the domain microservice
+	// did not return the current trunk lock state
+	GetLockState(ctx context.Context, vin model.Vin, token model.TrunkAccessToken) (*model.LockState, error)
+	// SetLockStateCustomerId Set TrunkLockState of a Car if customer has an active rental for the car
+	// Returns rentalErrors.ErrTrunkAccessDenied if the customer does not have an active rental for the car
+	SetLockStateCustomerId(ctx context.Context, lockState model.LockState, vin model.Vin,
+		customerId model.CustomerId) error
+	// SetLockStateTrunkAccessToken Set TrunkLockState of a Car if a valid token is provided
+	// Returns rentalErrors.ErrTrunkAccessDenied if the token is not valid
+	SetLockStateTrunkAccessToken(ctx context.Context, lockState model.LockState, vin model.Vin,
+		token model.TrunkAccessToken) error
 }
