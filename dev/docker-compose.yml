@@ -1,6 +1,6 @@
 version: '3.8'
 
-name: rental-management-dev
+name: ccsappvp2-rental-management-dev
 
 # Deploy this stack to test the database for development
 # We recommend to use MongoDB Compass for local database access
@@ -9,7 +9,7 @@ services:
     image: mongo:6
     restart: 'no'
     ports:
-      - "27017:27017"
+      - "27032:27017"
     environment:
       MONGO_INITDB_ROOT_USERNAME: root
       MONGO_INITDB_ROOT_PASSWORD: example

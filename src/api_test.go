@@ -1,6 +1,7 @@
 package main
 
 import (
+	"RentalManagement/environment"
 	"RentalManagement/infrastructure/database"
 	"RentalManagement/infrastructure/database/db"
 	"RentalManagement/logic/model"
@@ -20,37 +21,53 @@ import (
 	"time"
 )
 
+const carServerUrl = "https://carservice.kit.edu"
+
 type ApiTestSuite struct {
 	suite.Suite
 	dbConnection       db.IConnection
 	collection         string
 	app                *echo.Echo
-	config             *Config
 	recordingFormatter *testhelpers.RecordingFormatter
 }
 
 func (suite *ApiTestSuite) SetupSuite() {
-	// load the environment variables for the database layer
-	dbConfig, err := db.LoadConfigFromFile("testdata/testdb.env")
-	if err != nil {
-		suite.T().Fatal(err.Error())
-	}
-
-	suite.config = &Config{allowOrigins: []string{"*"}, domainServer: "https://carservice.kit.edu", domainTimeout: 1}
+	environment.SetupTestingEnvironment(carServerUrl)
 
 	// generate a collection name so that concurrent executions do not interfere
-	dbConfig.CollectionPrefix = fmt.Sprintf("test-%d-", time.Now().Unix())
-	suite.collection = dbConfig.CollectionPrefix + database.CollectionBaseName
+	collectionPrefix := fmt.Sprintf("test-%d-", time.Now().Unix())
+	environment.GetEnvironment().SetAppCollectionPrefix(collectionPrefix)
+	suite.collection = collectionPrefix + database.CollectionBaseName
 
-	suite.dbConnection, err = db.NewDbConnection(dbConfig)
+	var err error
+	suite.dbConnection, err = db.NewDbConnection(environment.GetEnvironment())
+	if err != nil {
+		suite.handleDbConnectionError(err)
+	}
+
+	suite.app, err = newApp(suite.dbConnection)
 	if err != nil {
 		suite.T().Fatal(err.Error())
 	}
+}
 
-	suite.app, err = newApp(suite.config, suite.dbConnection, dbConfig)
-	if err != nil {
+func (suite *ApiTestSuite) handleDbConnectionError(err error) {
+	// if local setup mode is disabled, we fail without any additional checks
+	if !environment.GetEnvironment().IsLocalSetupMode() {
 		suite.T().Fatal(err.Error())
 	}
+
+	running, dockerErr := testhelpers.IsMongoDbContainerRunning()
+	if dockerErr != nil {
+		suite.T().Fatal(dockerErr.Error())
+	}
+	if !running {
+		suite.T().Fatal("MongoDB container is not running. " +
+			"Please start it with 'docker compose up -d' and try again.")
+	}
+	fmt.Println("MongoDB container seems to be running, but the connection could not be established. " +
+		"Please check the logs for more information.")
+	suite.T().Fatal(err.Error())
 }
 
 func (suite *ApiTestSuite) SetupTest() {
@@ -97,19 +114,19 @@ func (suite *ApiTestSuite) newApiTestWithCarMock() *apitest.APITest {
 func (suite *ApiTestSuite) newCarMock() []*apitest.Mock {
 	return []*apitest.Mock{
 		apitest.NewMock().
-			Get(suite.config.domainServer + "/cars/" + testdata.VinCar).
+			Get(environment.GetEnvironment().GetCarServerUrl() + "/cars/" + testdata.VinCar).
 			RespondWith().Status(http.StatusOK).JSON(testdata.ExampleCar).End(),
 		apitest.NewMock().
-			Get(suite.config.domainServer + "/cars/" + testdata.VinCar2).
+			Get(environment.GetEnvironment().GetCarServerUrl() + "/cars/" + testdata.VinCar2).
 			RespondWith().Status(http.StatusOK).JSON(testdata.ExampleCar2).End(),
 		apitest.NewMock().
-			Get(suite.config.domainServer + "/cars/" + testdata.UnknownVin).
+			Get(environment.GetEnvironment().GetCarServerUrl() + "/cars/" + testdata.UnknownVin).
 			RespondWith().Status(http.StatusNotFound).End(),
 		apitest.NewMock().
-			Get(suite.config.domainServer + "/cars").
+			Get(environment.GetEnvironment().GetCarServerUrl() + "/cars").
 			RespondWith().Status(http.StatusOK).JSON(testdata.ExampleCarVins).End(),
 		apitest.NewMock().
-			Put(suite.config.domainServer + "/cars/" + testdata.VinCar + "/trunkLock").
+			Put(environment.GetEnvironment().GetCarServerUrl() + "/cars/" + testdata.VinCar + "/trunkLock").
 			RespondWith().Status(http.StatusNoContent).End(),
 	}
 }

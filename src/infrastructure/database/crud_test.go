@@ -16,7 +16,14 @@ import (
 )
 
 var collectionPrefix = "collectionPrefix"
-var dbConfig = &db.Config{CollectionPrefix: collectionPrefix}
+
+type TestCrudConfig struct{}
+
+func (c *TestCrudConfig) GetAppCollectionPrefix() string {
+	return collectionPrefix
+}
+
+var config = &TestCrudConfig{}
 
 var timePeriod2023 = model.TimePeriod{
 	StartDate: time.Date(2023, 1, 1, 0, 0, 0, 0, time.UTC),
@@ -65,7 +72,7 @@ func TestCrud_GetUnavailableCars_success(t *testing.T) {
 		gomock.Any(),
 	).SetArg(4, cars).Return(nil)
 
-	crud := NewICRUD(mockConnection, dbConfig, mockTime)
+	crud := NewICRUD(mockConnection, config, mockTime)
 	vins, err := crud.GetUnavailableCars(ctx, timePeriod)
 
 	assert.Nil(t, err)
@@ -103,7 +110,7 @@ func TestCrud_GetUnavailableCars_successEmpty(t *testing.T) {
 		gomock.Any(),
 	).SetArg(4, []entities.Car{}).Return(nil)
 
-	crud := NewICRUD(mockConnection, dbConfig, mockTime)
+	crud := NewICRUD(mockConnection, config, mockTime)
 	vins, err := crud.GetUnavailableCars(ctx, timePeriod)
 
 	assert.Nil(t, err)
@@ -140,7 +147,7 @@ func TestCrud_GetUnavailableCars_databaseError(t *testing.T) {
 		gomock.Any(),
 	).Return(databaseError)
 
-	crud := NewICRUD(mockConnection, dbConfig, mockTime)
+	crud := NewICRUD(mockConnection, config, mockTime)
 	vins, err := crud.GetUnavailableCars(ctx, timePeriod2023)
 
 	assert.ErrorIs(t, err, databaseError)
@@ -194,7 +201,7 @@ func TestCrud_CreateRental_success(t *testing.T) {
 		assert.Equal(t, 8, len(rental.RentalId))
 	}).Return(nil)
 
-	crud := NewICRUD(mockConnection, dbConfig, mockTime)
+	crud := NewICRUD(mockConnection, config, mockTime)
 
 	err := crud.CreateRental(ctx, vin, customerId, timePeriod2023)
 	assert.Nil(t, err)
@@ -225,7 +232,7 @@ func TestCrud_CreateRental_databaseError(t *testing.T) {
 		true,
 	).Return(databaseError)
 
-	crud := NewICRUD(mockConnection, dbConfig, mockTime)
+	crud := NewICRUD(mockConnection, config, mockTime)
 
 	err := crud.CreateRental(ctx, vin, customerId, timePeriod2023)
 	assert.ErrorIs(t, err, databaseError)
@@ -254,7 +261,7 @@ func TestCrud_CreateRental_conflict(t *testing.T) {
 		true,
 	).Return(db.DuplicateKeyError)
 
-	crud := NewICRUD(mockConnection, dbConfig, mockTime)
+	crud := NewICRUD(mockConnection, config, mockTime)
 
 	err := crud.CreateRental(ctx, vin, customerId, timePeriod2023)
 	assert.ErrorIs(t, err, rentalErrors.ErrConflictingRentalExists)
@@ -290,7 +297,7 @@ func TestCrud_GetRentalsOfCustomer_success_NoRentals(t *testing.T) {
 		gomock.Any(),
 	).SetArg(3, []entities.Car{car1}).Return(nil)
 
-	crud := NewICRUD(mockConnection, dbConfig, mockTimeProvider)
+	crud := NewICRUD(mockConnection, config, mockTimeProvider)
 	returnedRentals, err := crud.GetRentalsOfCustomer(ctx, customerId)
 
 	assert.Nil(t, err)
@@ -395,7 +402,7 @@ func TestCrud_GetRentalsOfCustomer_success(t *testing.T) {
 		gomock.Any(),
 	).SetArg(3, cars).Return(nil)
 
-	crud := NewICRUD(mockConnection, dbConfig, mockTimeProvider)
+	crud := NewICRUD(mockConnection, config, mockTimeProvider)
 	returnedRentals, err := crud.GetRentalsOfCustomer(ctx, customerId)
 
 	assert.Nil(t, err)
@@ -422,7 +429,7 @@ func TestCrud_GetRentalsOfCustomer_databaseError(t *testing.T) {
 		gomock.Any(),
 	).Return(dbError)
 
-	crud := NewICRUD(mockConnection, dbConfig, mockTimeProvider)
+	crud := NewICRUD(mockConnection, config, mockTimeProvider)
 	returnedRentals, err := crud.GetRentalsOfCustomer(ctx, customerId)
 
 	assert.ErrorIs(t, err, dbError)
@@ -502,7 +509,7 @@ func TestCrud_SetTrunkToken_success_noRestriction_existingToken(t *testing.T) {
 		false, // no upsert
 	).Return(nil)
 
-	crud := NewICRUD(mockConnection, dbConfig, mockTimeProvider)
+	crud := NewICRUD(mockConnection, config, mockTimeProvider)
 	retToken, err := crud.SetTrunkToken(ctx, "rentalId", newToken)
 
 	assert.Nil(t, err)
@@ -576,7 +583,7 @@ func TestCrud_SetTrunkToken_success_noRestriction_newToken(t *testing.T) {
 		false, // no upsert
 	).Return(nil)
 
-	crud := NewICRUD(mockConnection, dbConfig, mockTimeProvider)
+	crud := NewICRUD(mockConnection, config, mockTimeProvider)
 	retToken, err := crud.SetTrunkToken(ctx, "rentalId", newToken)
 
 	assert.Nil(t, err)
@@ -658,7 +665,7 @@ func TestCrud_SetTrunkToken_success_restriction_newToken(t *testing.T) {
 		false, // no upsert
 	).Return(nil)
 
-	crud := NewICRUD(mockConnection, dbConfig, mockTimeProvider)
+	crud := NewICRUD(mockConnection, config, mockTimeProvider)
 	retToken, err := crud.SetTrunkToken(ctx, "rentalId", newToken)
 
 	assert.Nil(t, err)
@@ -787,7 +794,7 @@ func TestCrud_SetTrunkToken_optimisticLockingError_recoverAfter1_restrict(t *tes
 		false, // no upsert
 	).Return(nil)
 
-	crud := NewICRUD(mockConnection, dbConfig, mockTimeProvider)
+	crud := NewICRUD(mockConnection, config, mockTimeProvider)
 	retToken, err := crud.SetTrunkToken(ctx, "rentalId", newToken)
 
 	assert.Nil(t, err)
@@ -875,7 +882,7 @@ func TestCrud_SetTrunkToken_optimisticLockingError_recoverAfter1_rentalDisappear
 		gomock.Any(),
 	).Return(nil)
 
-	crud := NewICRUD(mockConnection, dbConfig, mockTimeProvider)
+	crud := NewICRUD(mockConnection, config, mockTimeProvider)
 	retToken, err := crud.SetTrunkToken(ctx, "rentalId", newToken)
 
 	assert.ErrorIs(t, err, rentalErrors.ErrRentalNotFound)
@@ -979,7 +986,7 @@ func TestCrud_SetTrunkToken_optimisticLockingError_recoverAfter1_rentalExpired(t
 		},
 	}).Return(nil)
 
-	crud := NewICRUD(mockConnection, dbConfig, mockTimeProvider)
+	crud := NewICRUD(mockConnection, config, mockTimeProvider)
 	retToken, err := crud.SetTrunkToken(ctx, "rentalId", newToken)
 
 	assert.ErrorIs(t, err, rentalErrors.ErrRentalNotActive)
@@ -1068,7 +1075,7 @@ func TestCrud_SetTrunkToken_optimisticLockingError_recoverAfter2(t *testing.T) {
 		false, // no upsert
 	).Return(nil)
 
-	crud := NewICRUD(mockConnection, dbConfig, mockTimeProvider)
+	crud := NewICRUD(mockConnection, config, mockTimeProvider)
 	retToken, err := crud.SetTrunkToken(ctx, "rentalId", newToken)
 
 	assert.Nil(t, err)
@@ -1142,7 +1149,7 @@ func TestCrud_SetTrunkToken_optimisticLockingError_failAfter3(t *testing.T) {
 		false, // no upsert
 	).Return(db.NoDocumentsError).Times(3)
 
-	crud := NewICRUD(mockConnection, dbConfig, mockTimeProvider)
+	crud := NewICRUD(mockConnection, config, mockTimeProvider)
 	retToken, err := crud.SetTrunkToken(ctx, "rentalId", newToken)
 
 	assert.ErrorIs(t, err, OptimisticLockingError)
@@ -1174,7 +1181,7 @@ func TestCrud_SetTrunkToken_rentalNotFound(t *testing.T) {
 		gomock.Any(),
 	).SetArg(3, []entities.Car{}).Return(nil)
 
-	crud := NewICRUD(mockConnection, dbConfig, mockTimeProvider)
+	crud := NewICRUD(mockConnection, config, mockTimeProvider)
 	retToken, err := crud.SetTrunkToken(ctx, "rentalId", model.TrunkAccess{})
 
 	assert.ErrorIs(t, err, rentalErrors.ErrRentalNotFound)
@@ -1208,7 +1215,7 @@ func TestCrud_SetTrunkToken_dbError_aggregate(t *testing.T) {
 		gomock.Any(),
 	).Return(dbError)
 
-	crud := NewICRUD(mockConnection, dbConfig, mockTimeProvider)
+	crud := NewICRUD(mockConnection, config, mockTimeProvider)
 	retToken, err := crud.SetTrunkToken(ctx, "rentalId", model.TrunkAccess{})
 
 	assert.ErrorIs(t, err, dbError)
@@ -1284,7 +1291,7 @@ func TestCrud_SetTrunkToken_dbError_update(t *testing.T) {
 		false, // no upsert
 	).Return(dbError)
 
-	crud := NewICRUD(mockConnection, dbConfig, mockTimeProvider)
+	crud := NewICRUD(mockConnection, config, mockTimeProvider)
 	retToken, err := crud.SetTrunkToken(ctx, "rentalId", newToken)
 
 	assert.ErrorIs(t, err, dbError)
@@ -1341,7 +1348,7 @@ func TestCrud_SetTrunkToken_periodNotOverlapping(t *testing.T) {
 		},
 	}
 
-	crud := NewICRUD(mockConnection, dbConfig, mockTimeProvider)
+	crud := NewICRUD(mockConnection, config, mockTimeProvider)
 	retToken, err := crud.SetTrunkToken(ctx, "rentalId", newToken)
 
 	assert.ErrorIs(t, err, rentalErrors.ErrRentalNotOverlapping)
@@ -1398,7 +1405,7 @@ func TestCrud_SetTrunkToken_rentalNotActive(t *testing.T) {
 		},
 	}
 
-	crud := NewICRUD(mockConnection, dbConfig, mockTimeProvider)
+	crud := NewICRUD(mockConnection, config, mockTimeProvider)
 	retToken, err := crud.SetTrunkToken(ctx, "rentalId", newToken)
 
 	assert.ErrorIs(t, err, rentalErrors.ErrRentalNotActive)
@@ -1474,7 +1481,7 @@ func TestCrud_GetRental_success(t *testing.T) {
 		gomock.Any(),
 	).SetArg(3, cars).Return(nil)
 
-	crud := NewICRUD(mockConnection, dbConfig, mockTimeProvider)
+	crud := NewICRUD(mockConnection, config, mockTimeProvider)
 	returnedRental, err := crud.GetRental(ctx, rentalId)
 
 	assert.Nil(t, err)
@@ -1500,7 +1507,7 @@ func TestCrud_GetRental_rentalIdNotFoundError(t *testing.T) {
 		gomock.Any(),
 	).Return(nil)
 
-	crud := NewICRUD(mockConnection, dbConfig, mockTimeProvider)
+	crud := NewICRUD(mockConnection, config, mockTimeProvider)
 	returnedRental, err := crud.GetRental(ctx, rentalId)
 
 	assert.ErrorIs(t, err, rentalErrors.ErrRentalNotFound)
@@ -1527,7 +1534,7 @@ func TestCrud_GetRental_databaseError(t *testing.T) {
 		gomock.Any(),
 	).Return(dbError)
 
-	crud := NewICRUD(mockConnection, dbConfig, mockTimeProvider)
+	crud := NewICRUD(mockConnection, config, mockTimeProvider)
 	returnedRental, err := crud.GetRental(ctx, rentalId)
 
 	assert.ErrorIs(t, err, dbError)
@@ -1590,7 +1597,7 @@ func TestCrud_GetNextRental_success_exists(t *testing.T) {
 	).SetArg(3, cars).Return(nil)
 	mockTimeProvider.EXPECT().Now().Return(currentDate)
 
-	crud := NewICRUD(mockConnection, dbConfig, mockTimeProvider)
+	crud := NewICRUD(mockConnection, config, mockTimeProvider)
 	returnedRental, err := crud.GetNextRental(ctx, "WVWAA71K08W201030")
 
 	assert.Nil(t, err)
@@ -1626,7 +1633,7 @@ func TestCrud_GetNextRental_success_notExists(t *testing.T) {
 		gomock.Any(),
 	).SetArg(3, []entities.Car{}).Return(nil)
 
-	crud := NewICRUD(mockConnection, dbConfig, mockTimeProvider)
+	crud := NewICRUD(mockConnection, config, mockTimeProvider)
 	returnedRental, err := crud.GetNextRental(ctx, "WVWAA71K08W201030")
 
 	assert.Nil(t, err)
@@ -1663,7 +1670,7 @@ func TestCrud_GetNextRental_databaseError(t *testing.T) {
 		gomock.Any(),
 	).Return(dbError)
 
-	crud := NewICRUD(mockConnection, dbConfig, mockTimeProvider)
+	crud := NewICRUD(mockConnection, config, mockTimeProvider)
 	returnedRental, err := crud.GetNextRental(ctx, "WVWAA71K08W201030")
 
 	assert.ErrorIs(t, err, dbError)
@@ -1734,7 +1741,7 @@ func TestCrud_GetTrunkAccess_success(t *testing.T) {
 		gomock.Any(),
 	).SetArg(3, cars).Return(nil)
 
-	crud := NewICRUD(mockConnection, dbConfig, mockTimeProvider)
+	crud := NewICRUD(mockConnection, config, mockTimeProvider)
 	returnedAccess, err := crud.GetTrunkAccess(ctx, vin, token)
 
 	assert.Nil(t, err)
@@ -1761,7 +1768,7 @@ func TestCrud_GetTrunkAccess_trunkAccessDenied(t *testing.T) {
 		gomock.Any(),
 	).SetArg(3, []entities.Car{}).Return(nil)
 
-	crud := NewICRUD(mockConnection, dbConfig, mockTimeProvider)
+	crud := NewICRUD(mockConnection, config, mockTimeProvider)
 	returnedAccess, err := crud.GetTrunkAccess(ctx, vin, token)
 
 	assert.ErrorIs(t, err, rentalErrors.ErrTrunkAccessDenied)
@@ -1789,7 +1796,7 @@ func TestCrud_GetTrunkAccess_databaseError(t *testing.T) {
 		gomock.Any(),
 	).Return(dbError)
 
-	crud := NewICRUD(mockConnection, dbConfig, mockTimeProvider)
+	crud := NewICRUD(mockConnection, config, mockTimeProvider)
 	returnedAccess, err := crud.GetTrunkAccess(ctx, vin, token)
 
 	assert.ErrorIs(t, err, dbError)

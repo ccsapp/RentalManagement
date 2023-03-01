@@ -7,9 +7,9 @@ base-chart:
   extraEnvVars:
     - name: RM_ALLOW_ORIGINS
       value: "*"
-    - name: RM_DOMAIN_SERVER
+    - name: RM_CAR_SERVER
       value: https://cm-d-carimpl.cloud.iai.kit.edu
-    - name: RM_DOMAIN_TIMEOUT
+    - name: RM_REQUEST_TIMEOUT
       value: 5s
     # How-To: Remove to square brakets array placeholder in the line above if you wanna define additional environment variables
     # Example for adding a defined value to a Pod/Container

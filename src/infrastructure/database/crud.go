@@ -17,6 +17,10 @@ const CollectionBaseName = "rentals"
 
 var OptimisticLockingError = errors.New("optimistic locking failed")
 
+type CrudConfig interface {
+	GetAppCollectionPrefix() string
+}
+
 // ICRUD is a high level database interface. It directly maps to the business logic and abstracts away the
 // database entities and the database connection.
 type ICRUD interface {
@@ -51,10 +55,10 @@ type crud struct {
 	timeProvider util.ITimeProvider
 }
 
-func NewICRUD(db db.IConnection, config *db.Config, provider util.ITimeProvider) ICRUD {
+func NewICRUD(db db.IConnection, config CrudConfig, provider util.ITimeProvider) ICRUD {
 	return &crud{
 		db:           db,
-		collection:   config.CollectionPrefix + CollectionBaseName,
+		collection:   config.GetAppCollectionPrefix() + CollectionBaseName,
 		timeProvider: provider,
 	}
 }
