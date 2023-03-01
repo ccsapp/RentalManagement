@@ -2,40 +2,29 @@ package main
 
 import (
 	"RentalManagement/api"
+	"RentalManagement/environment"
 	"RentalManagement/infrastructure/car"
 	"RentalManagement/infrastructure/database"
 	"RentalManagement/infrastructure/database/db"
 	"RentalManagement/logic/operations"
 	"RentalManagement/util"
-	"errors"
+	"fmt"
 	"github.com/labstack/echo/v4"
 	"github.com/labstack/echo/v4/middleware"
 	"log"
 	"net/http"
-	"os"
-	"strings"
-	"time"
 )
-
-const (
-	EnvAllowOrigins  = "RM_ALLOW_ORIGINS"
-	EnvDomainServer  = "RM_DOMAIN_SERVER"
-	EnvDomainTimeout = "RM_DOMAIN_TIMEOUT"
-)
-
-type Config struct {
-	allowOrigins  []string
-	domainServer  string
-	domainTimeout time.Duration
-}
 
 // newApp allows production as well as testing to create a new Echo instance for the API
-func newApp(config *Config, dbConnection db.IConnection, dbConfig *db.Config) (*echo.Echo, error) {
+// Configuration values are read from the environment.
+func newApp(dbConnection db.IConnection) (*echo.Echo, error) {
 	app := echo.New()
 
-	if len(config.allowOrigins) > 0 {
+	// add CORS middleware if allowed origins are configured
+	allowOrigins := environment.GetEnvironment().GetAppAllowOrigins()
+	if len(allowOrigins) > 0 {
 		app.Use(middleware.CORSWithConfig(middleware.CORSConfig{
-			AllowOrigins: config.allowOrigins,
+			AllowOrigins: allowOrigins,
 		}))
 	}
 
@@ -45,10 +34,10 @@ func newApp(config *Config, dbConnection db.IConnection, dbConfig *db.Config) (*
 		return nil, err
 	}
 
-	carClient, err := car.NewClientWithResponses(config.domainServer,
+	carClient, err := car.NewClientWithResponses(environment.GetEnvironment().GetCarServerUrl(),
 		car.WithHTTPClient(
 			&http.Client{
-				Timeout: config.domainTimeout,
+				Timeout: environment.GetEnvironment().GetRequestTimeout(),
 			},
 		),
 	)
@@ -57,7 +46,7 @@ func newApp(config *Config, dbConnection db.IConnection, dbConfig *db.Config) (*
 		return nil, err
 	}
 
-	crudInstance := database.NewICRUD(dbConnection, dbConfig, util.TimeProvider{})
+	crudInstance := database.NewICRUD(dbConnection, environment.GetEnvironment(), util.TimeProvider{})
 	operationsInstance := operations.NewOperations(carClient, crudInstance, util.TimeProvider{})
 	controllerInstance := api.NewController(operationsInstance, util.TimeProvider{})
 
@@ -81,60 +70,17 @@ func newApp(config *Config, dbConnection db.IConnection, dbConfig *db.Config) (*
 	return app, nil
 }
 
-func loadConfig() (*Config, error) {
-	allowOriginsString := os.Getenv(EnvAllowOrigins)
-	var allowOrigins []string
-	if allowOriginsString != "" {
-		allowOrigins = strings.Split(allowOriginsString, ",")
-	} else {
-		allowOrigins = []string{}
-	}
-
-	domainServer := os.Getenv(EnvDomainServer)
-	if domainServer == "" {
-		return nil, errors.New("no domain server given")
-	}
-
-	timeoutString := os.Getenv(EnvDomainTimeout)
-	var domainTimeout time.Duration
-
-	if timeoutString != "" {
-		var err error // declaring with := below would create separate domainTimeout var in this scope
-		domainTimeout, err = time.ParseDuration(timeoutString)
-		if err != nil {
-			return nil, errors.New("invalid domain timeout configured")
-		}
-	} else {
-		domainTimeout = 5 * time.Second
-	}
-
-	return &Config{
-		allowOrigins,
-		domainServer,
-		domainTimeout,
-	}, nil
-}
-
 func main() {
-	config, err := loadConfig()
+	dbConnection, err := db.NewDbConnection(environment.GetEnvironment())
 	if err != nil {
 		log.Fatal(err)
 	}
 
-	dbConfig, err := db.LoadConfigFromEnv()
+	app, err := newApp(dbConnection)
 	if err != nil {
 		log.Fatal(err)
 	}
 
-	dbConnection, err := db.NewDbConnection(dbConfig)
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	app, err := newApp(config, dbConnection, dbConfig)
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	app.Logger.Fatal(app.Start(":80"))
+	// start the server on the configured port
+	app.Logger.Fatal(app.Start(fmt.Sprintf(":%d", environment.GetEnvironment().GetAppExposePort())))
 }

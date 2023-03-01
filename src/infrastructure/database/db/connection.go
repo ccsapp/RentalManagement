@@ -5,6 +5,7 @@ package db
 import (
 	"context"
 	"errors"
+	"fmt"
 	"go.mongodb.org/mongo-driver/mongo"
 	mongoOptions "go.mongodb.org/mongo-driver/mongo/options"
 	"time"
@@ -70,14 +71,25 @@ type connection struct {
 // NewDbConnection creates a new connection to the database. You should defer a call to the CleanUpDatabase method
 // on the returned IConnection object.
 // Any rentalErrors are unexpected.
-func NewDbConnection(config *Config) (IConnection, error) {
+func NewDbConnection(config DatabaseConfig) (IConnection, error) {
 	m := connection{factory: &MongoFactory{}}
 	return &m, m.setupDatabase(config)
 }
 
-func (m *connection) setupDatabase(config *Config) error {
+func toConnectionUri(config DatabaseConfig) string {
+	return fmt.Sprintf(
+		"mongodb://%s:%s@%s:%d/%s",
+		config.GetMongoDbUser(),
+		config.GetMongoDbPassword(),
+		config.GetMongoDbHost(),
+		config.GetMongoDbPort(),
+		config.GetMongoDbDatabase(),
+	)
+}
+
+func (m *connection) setupDatabase(config DatabaseConfig) error {
 	opts := mongoOptions.Client()
-	opts.ApplyURI("mongodb://" + config.User + ":" + config.Password + "@" + config.Host + ":" + "27017" + "/" + config.Db)
+	opts.ApplyURI(toConnectionUri(config))
 	var err error
 
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
@@ -89,11 +101,11 @@ func (m *connection) setupDatabase(config *Config) error {
 	}
 
 	// ensure connection was successful
-	if err = m.client.Ping(context.Background(), nil); err != nil {
+	if err = m.client.Ping(ctx, nil); err != nil {
 		return err
 	}
 
-	m.database = m.client.Database(config.Db, mongoOptions.Database())
+	m.database = m.client.Database(config.GetMongoDbDatabase(), mongoOptions.Database())
 	return nil
 }
 
