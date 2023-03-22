@@ -7,16 +7,17 @@ import (
 	"RentalManagement/testdata"
 	"context"
 	"errors"
+	"net/http"
+	"testing"
+	"time"
+
 	carTypes "git.scc.kit.edu/cm-tm/cm-team/projectwork/pse/domain/d-cargotypes.git"
 	"github.com/golang/mock/gomock"
 	"github.com/labstack/echo/v4"
 	"github.com/stretchr/testify/assert"
-	"net/http"
-	"testing"
-	"time"
 )
 
-var exampleCustomerID = "M9hUnd8a"
+var exampleCustomerID = "customer@example.com"
 
 var availableCar1 = model.CarAvailable{
 	Brand:         "Audi",
