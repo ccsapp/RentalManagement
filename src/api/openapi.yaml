@@ -484,8 +484,8 @@ components:
       description: Unique identification of a rental
     customerId:
       type: string
-      pattern: '^[a-zA-Z0-9]{8}$'
-      example: d9ChwOvI
+      format: email
+      example: customer@example.com
       description: Unique identification of a customer
     trunkAccessToken:
       type: string
