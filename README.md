@@ -1,20 +1,20 @@
 # RentalManagement
 
 RentalManagement provides the functionality for the capability 
-[Management of Rentals](https://git.scc.kit.edu/cm-tm/cm-team/projectwork/pse/0-doc-ccs-app-v-2/-/blob/main/pages/capabilities.md) 
-via [API endpoints](https://git.scc.kit.edu/cm-tm/cm-team/projectwork/pse/application/rentalmanagementdesign)
+[Management of Rentals](https://github.com/ccsapp/docs/blob/main/pages/capabilities.md) 
+via [API endpoints](https://github.com/ccsapp/RentalManagementDesign/blob/main/openapi.yaml)
 dedicated to individual 
-[use cases](https://git.scc.kit.edu/cm-tm/cm-team/projectwork/pse/0-doc-ccs-app-v-2/-/blob/main/pages/use_case_diagram.md).
+[use cases](https://github.com/ccsapp/docs/blob/main/pages/use_case_diagram.md).
 
-For the implementation of the business logic required for the use cases, RentalManagement orchestrates [Car](https://git.scc.kit.edu/cm-tm/cm-team/projectwork/pse/domain/d-carimpl) to access required data.
-Therefore, it depends on the private Git repository [CarGoTypes](https://git.scc.kit.edu/cm-tm/cm-team/projectwork/pse/domain/d-cargotypes) to provide mappings for the JSON responses.
+For the implementation of the business logic required for the use cases, RentalManagement orchestrates [Car](https://github.com/ccsapp/Car) to access required data.
+Therefore, it depends on the Git repository [cargotypes](https://github.com/ccsapp/cargotypes) to provide mappings for the JSON responses.
 Further information on the usage of private Git repositories with go can be found there.
 
 ## Design
 
 [Task Processes](pages/task_processes.md)
 
-The provided API endpoints of RentalManagement are specified in the [API specification](https://git.scc.kit.edu/cm-tm/cm-team/projectwork/pse/application/rentalmanagementdesign).
+The provided API endpoints of RentalManagement are specified in the [API specification](https://github.com/ccsapp/RentalManagementDesign/blob/main/openapi.yaml).
 
 ## :warning: CORS Warning
 

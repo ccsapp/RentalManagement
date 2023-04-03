@@ -11,9 +11,8 @@ import (
 	"testing"
 	"time"
 
-	carTypes "git.scc.kit.edu/cm-tm/cm-team/projectwork/pse/domain/d-cargotypes.git"
+	carTypes "github.com/ccsapp/cargotypes"
 	"github.com/golang/mock/gomock"
-	"github.com/labstack/echo/v4"
 	"github.com/stretchr/testify/assert"
 )
 
