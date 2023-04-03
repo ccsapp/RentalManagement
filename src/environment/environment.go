@@ -24,37 +24,22 @@ func SetupTestingEnvironment(carServerUrl string) {
 }
 
 type Environment struct {
-	mongoDbHost         string
-	mongoDbPort         int
-	mongoDbDatabase     string
-	mongoDbUser         string
-	mongoDbPassword     string
-	appExposePort       int
-	appCollectionPrefix string
-	carServerUrl        string
-	requestTimeout      time.Duration
-	appAllowOrigins     []string
-	isLocalSetupMode    bool
+	mongoDbConnectionString string
+	mongoDbDatabase         string
+	appExposePort           int
+	appCollectionPrefix     string
+	carServerUrl            string
+	requestTimeout          time.Duration
+	appAllowOrigins         []string
+	isLocalSetupMode        bool
 }
 
-func (e *Environment) GetMongoDbHost() string {
-	return e.mongoDbHost
-}
-
-func (e *Environment) GetMongoDbPort() int {
-	return e.mongoDbPort
+func (e *Environment) GetMongoDbConnectionString() string {
+	return e.mongoDbConnectionString
 }
 
 func (e *Environment) GetMongoDbDatabase() string {
 	return e.mongoDbDatabase
-}
-
-func (e *Environment) GetMongoDbUser() string {
-	return e.mongoDbUser
-}
-
-func (e *Environment) GetMongoDbPassword() string {
-	return e.mongoDbPassword
 }
 
 func (e *Environment) GetAppExposePort() int {

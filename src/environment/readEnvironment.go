@@ -11,19 +11,15 @@ import (
 )
 
 const (
-	envMongoDbHost         = "MONGODB_DATABASE_HOST"
-	envMongoDbPort         = "MONGODB_DATABASE_PORT"
-	envMongoDbDatabase     = "MONGODB_DATABASE_NAME"
-	envMongoDbUser         = "MONGODB_DATABASE_USER"
-	envMongoDbPassword     = "MONGODB_DATABASE_PASSWORD"
-	envAppExposePort       = "RM_EXPOSE_PORT"
-	envAppCollectionPrefix = "RM_COLLECTION_PREFIX"
-	envCarServerUrl        = "RM_CAR_SERVER"
-	envRequestTimeout      = "RM_REQUEST_TIMEOUT"
-	envAppAllowOrigins     = "RM_ALLOW_ORIGINS"
-	envLocalSetupMode      = "RM_LOCAL_SETUP"
+	envMongoDbConnectionString = "MONGODB_CONNECTION_STRING"
+	envMongoDbDatabase         = "MONGODB_DATABASE_NAME"
+	envAppExposePort           = "RM_EXPOSE_PORT"
+	envAppCollectionPrefix     = "RM_COLLECTION_PREFIX"
+	envCarServerUrl            = "RM_CAR_SERVER"
+	envRequestTimeout          = "RM_REQUEST_TIMEOUT"
+	envAppAllowOrigins         = "RM_ALLOW_ORIGINS"
+	envLocalSetupMode          = "RM_LOCAL_SETUP"
 
-	defaultMongoDbPort         = 27017
 	defaultAppExposePort       = 80
 	defaultAppCollectionPrefix = ""
 	defaultRequestTimeout      = 5 * time.Second
@@ -65,17 +61,14 @@ func readEnvironment() *Environment {
 // If any of the required environment variables is not set, the program will panic.
 func readEnvironmentFromEnv() *Environment {
 	return &Environment{
-		mongoDbHost:         getStringEnvVariable(envMongoDbHost, nil),
-		mongoDbPort:         getIntegerEnvVariable(envMongoDbPort, ptr(defaultMongoDbPort)),
-		mongoDbDatabase:     getStringEnvVariable(envMongoDbDatabase, nil),
-		mongoDbUser:         getStringEnvVariable(envMongoDbUser, nil),
-		mongoDbPassword:     getStringEnvVariable(envMongoDbPassword, nil),
-		appExposePort:       getIntegerEnvVariable(envAppExposePort, ptr(defaultAppExposePort)),
-		appCollectionPrefix: getStringEnvVariable(envAppCollectionPrefix, ptr(defaultAppCollectionPrefix)),
-		carServerUrl:        getStringEnvVariable(envCarServerUrl, nil),
-		requestTimeout:      getDurationEnvVariable(envRequestTimeout, ptr(defaultRequestTimeout)),
-		appAllowOrigins:     getStringArrayEnvVariable(envAppAllowOrigins, ptr(defaultAppAllowOrigins)),
-		isLocalSetupMode:    getBooleanEnvVariable(envLocalSetupMode),
+		mongoDbConnectionString: getStringEnvVariable(envMongoDbConnectionString, nil),
+		mongoDbDatabase:         getStringEnvVariable(envMongoDbDatabase, nil),
+		appExposePort:           getIntegerEnvVariable(envAppExposePort, ptr(defaultAppExposePort)),
+		appCollectionPrefix:     getStringEnvVariable(envAppCollectionPrefix, ptr(defaultAppCollectionPrefix)),
+		carServerUrl:            getStringEnvVariable(envCarServerUrl, nil),
+		requestTimeout:          getDurationEnvVariable(envRequestTimeout, ptr(defaultRequestTimeout)),
+		appAllowOrigins:         getStringArrayEnvVariable(envAppAllowOrigins, ptr(defaultAppAllowOrigins)),
+		isLocalSetupMode:        getBooleanEnvVariable(envLocalSetupMode),
 	}
 }
 

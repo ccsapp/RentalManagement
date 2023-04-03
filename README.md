@@ -63,18 +63,15 @@ correct docker compose stack is running and will print a warning if it is not.
 Do not use the local setup mode in a deployment or a custom setup, i.e. do not set the `RM_LOCAL_SETUP` 
 environment variable. Instead, use the following environment variables to configure the microservice:
 
-| Environment Variable        | Local Setup Value       | Required for Testing? | Comment                                                                                                                             |
-|-----------------------------|-------------------------|-----------------------|-------------------------------------------------------------------------------------------------------------------------------------|
-| `MONGODB_DATABASE_HOST`     | localhost               | yes                   |                                                                                                                                     |
-| `MONGODB_DATABASE_PORT`     | 27032                   | yes                   | Optional, defaults to 27017. The local setup uses a non-default port!                                                               |
-| `MONGODB_DATABASE_NAME`     | ccsappvp2rentals        | yes                   |                                                                                                                                     |
-| `MONGODB_DATABASE_USER`     | root                    | yes                   |                                                                                                                                     |
-| `MONGODB_DATABASE_PASSWORD` | example                 | yes                   |                                                                                                                                     |
-| `RM_EXPOSE_PORT`            | 8012                    | no                    | Optional, defaults to 80. This is the port this microservice is exposing. The local setup exposes a non-default port!               |
-| `RM_COLLECTION_PREFIX`      | localSetup-             | no                    | Optional. A (unique) prefix that is prepended to every database collection of this service.                                         |
-| `RM_CAR_SERVER`             | `http://localhost:8001` | no                    | The URL of the Car server of the domain layer.                                                                                      |
-| `RM_REQUEST_TIMEOUT`        | 5s                      | no                    | Optional. The timeout for requests to the Car server ([number with suffix](https://pkg.go.dev/time#ParseDuration)). Defaults to 5s. |
-| `RM_ALLOW_ORIGINS`          | *                       | no                    | Optional. A comma-separated list of allowed origins for CORS requests. By default, no additional origins are allowed.               |
+| Environment Variable        | Local Setup Value                                       | Required for Testing? | Comment                                                                                                                             |
+|-----------------------------|---------------------------------------------------------|-----------------------|-------------------------------------------------------------------------------------------------------------------------------------|
+| `MONGODB_CONNECTION_STRING` | mongodb://root:example@localhost:27032/ccsappvp2rentals | yes                   | Local setup uses a non-default port!                                                                                                |
+| `MONGODB_DATABASE_NAME`     | ccsappvp2rentals                                        | yes                   |                                                                                                                                     |
+| `RM_EXPOSE_PORT`            | 8012                                                    | no                    | Optional, defaults to 80. This is the port this microservice is exposing. The local setup exposes a non-default port!               |
+| `RM_COLLECTION_PREFIX`      | localSetup-                                             | no                    | Optional. A (unique) prefix that is prepended to every database collection of this service.                                         |
+| `RM_CAR_SERVER`             | `http://localhost:8001`                                 | no                    | The URL of the Car server of the domain layer.                                                                                      |
+| `RM_REQUEST_TIMEOUT`        | 5s                                                      | no                    | Optional. The timeout for requests to the Car server ([number with suffix](https://pkg.go.dev/time#ParseDuration)). Defaults to 5s. |
+| `RM_ALLOW_ORIGINS`          | *                                                       | no                    | Optional. A comma-separated list of allowed origins for CORS requests. By default, no additional origins are allowed.               |
 
 ## Testing
 ### Test Setup
