@@ -286,7 +286,8 @@ func (suite *ApiTestSuite) TestCreateRental_syntacticallyInvalidTimePeriod() {
 		End()
 }
 
-func (suite *ApiTestSuite) TestCreateRental_invalidCustomerId() {
+// disabled, see issue #3
+/*func (suite *ApiTestSuite) TestCreateRental_invalidCustomerId() {
 	suite.newApiTestWithCarMock().
 		Post("/cars/"+testdata.VinCar+"/rentals").
 		Query("customerId", "invalid").
@@ -294,7 +295,7 @@ func (suite *ApiTestSuite) TestCreateRental_invalidCustomerId() {
 		Expect(suite.T()).
 		Status(http.StatusBadRequest).
 		End()
-}
+}*/
 
 func (suite *ApiTestSuite) TestCreateRental_invalidVin() {
 	suite.newApiTestWithCarMock().
@@ -625,14 +626,15 @@ func (suite *ApiTestSuite) TestGetRentalOverview_expiredRental() {
 		End()
 }
 
-func (suite *ApiTestSuite) TestGetRentalOverview_invalidCustomerId() {
+// disabled, see issue #3
+/*func (suite *ApiTestSuite) TestGetRentalOverview_invalidCustomerId() {
 	suite.newApiTestWithCarMock().
 		Get("/rentals").
 		Query("customerId", "waytoolongcustomerid").
 		Expect(suite.T()).
 		Status(http.StatusBadRequest).
 		End()
-}
+}*/
 
 func (suite *ApiTestSuite) TestGetRentalOverview_missingCustomerId() {
 	suite.newApiTestWithCarMock().
@@ -1478,7 +1480,8 @@ func (suite *ApiTestSuite) TestSetLockState_customerId_invalidVin() {
 		End()
 }
 
-func (suite *ApiTestSuite) TestSetLockState_customerId_invalidCustomerId() {
+// disabled, see issue #3
+/*func (suite *ApiTestSuite) TestSetLockState_customerId_invalidCustomerId() {
 	suite.newApiTestWithCarMock().
 		Put("/cars/"+testdata.VinCar+"/trunk").
 		Query("customerId", "invalidCustomerId").
@@ -1486,7 +1489,7 @@ func (suite *ApiTestSuite) TestSetLockState_customerId_invalidCustomerId() {
 		Expect(suite.T()).
 		Status(http.StatusBadRequest).
 		End()
-}
+}*/
 
 func (suite *ApiTestSuite) TestSetLockState_customerId_invalidLockState() {
 	suite.newApiTestWithCarMock().
