@@ -16,13 +16,11 @@ Further information on the usage of private Git repositories with go can be foun
 
 The provided API endpoints of RentalManagement are specified in the [API specification](https://github.com/ccsapp/RentalManagementDesign/blob/main/openapi.yaml).
 
-## :warning: CORS Warning
-
-The current HELM deployment of this microservice allows requests from all origins. This is a security risk and should be changed in production!
-Currently, this is needed for the frontend development to be able to access the API.
-
-
 ## Local Setup Mode
+> :warning: CORS Warning: The local setup mode of this microservice allows requests from all origins.
+> In production, this is a security risk! For production deployments, use custom configuration values with an 
+> appropriate value for `RM_ALLOW_ORIGINS`.
+
 To test RentalManagement locally, you can use the MongoDB Docker Compose setup provided in the `dev` folder.
 
 To do so, execute the following commands:
