@@ -1,28 +1,26 @@
 # RentalManagement
 
 RentalManagement provides the functionality for the capability 
-[Management of Rentals](https://git.scc.kit.edu/cm-tm/cm-team/projectwork/pse/0-doc-ccs-app-v-2/-/blob/main/pages/capabilities.md) 
-via [API endpoints](https://git.scc.kit.edu/cm-tm/cm-team/projectwork/pse/application/rentalmanagementdesign)
+[Management of Rentals](https://github.com/ccsapp/docs/blob/main/pages/capabilities.md) 
+via [API endpoints](https://github.com/ccsapp/RentalManagementDesign/blob/main/openapi.yaml)
 dedicated to individual 
-[use cases](https://git.scc.kit.edu/cm-tm/cm-team/projectwork/pse/0-doc-ccs-app-v-2/-/blob/main/pages/use_case_diagram.md).
+[use cases](https://github.com/ccsapp/docs/blob/main/pages/use_case_diagram.md).
 
-For the implementation of the business logic required for the use cases, RentalManagement orchestrates [Car](https://git.scc.kit.edu/cm-tm/cm-team/projectwork/pse/domain/d-carimpl) to access required data.
-Therefore, it depends on the private Git repository [CarGoTypes](https://git.scc.kit.edu/cm-tm/cm-team/projectwork/pse/domain/d-cargotypes) to provide mappings for the JSON responses.
+For the implementation of the business logic required for the use cases, RentalManagement orchestrates [Car](https://github.com/ccsapp/Car) to access required data.
+Therefore, it depends on the Git repository [cargotypes](https://github.com/ccsapp/cargotypes) to provide mappings for the JSON responses.
 Further information on the usage of private Git repositories with go can be found there.
 
 ## Design
 
 [Task Processes](pages/task_processes.md)
 
-The provided API endpoints of RentalManagement are specified in the [API specification](https://git.scc.kit.edu/cm-tm/cm-team/projectwork/pse/application/rentalmanagementdesign).
-
-## :warning: CORS Warning
-
-The current HELM deployment of this microservice allows requests from all origins. This is a security risk and should be changed in production!
-Currently, this is needed for the frontend development to be able to access the API.
-
+The provided API endpoints of RentalManagement are specified in the [API specification](https://github.com/ccsapp/RentalManagementDesign/blob/main/openapi.yaml).
 
 ## Local Setup Mode
+> :warning: CORS Warning: The local setup mode of this microservice allows requests from all origins.
+> In production, this is a security risk! For production deployments, use custom configuration values with an 
+> appropriate value for `RM_ALLOW_ORIGINS`.
+
 To test RentalManagement locally, you can use the MongoDB Docker Compose setup provided in the `dev` folder.
 
 To do so, execute the following commands:
@@ -63,18 +61,15 @@ correct docker compose stack is running and will print a warning if it is not.
 Do not use the local setup mode in a deployment or a custom setup, i.e. do not set the `RM_LOCAL_SETUP` 
 environment variable. Instead, use the following environment variables to configure the microservice:
 
-| Environment Variable        | Local Setup Value       | Required for Testing? | Comment                                                                                                                             |
-|-----------------------------|-------------------------|-----------------------|-------------------------------------------------------------------------------------------------------------------------------------|
-| `MONGODB_DATABASE_HOST`     | localhost               | yes                   |                                                                                                                                     |
-| `MONGODB_DATABASE_PORT`     | 27032                   | yes                   | Optional, defaults to 27017. The local setup uses a non-default port!                                                               |
-| `MONGODB_DATABASE_NAME`     | ccsappvp2rentals        | yes                   |                                                                                                                                     |
-| `MONGODB_DATABASE_USER`     | root                    | yes                   |                                                                                                                                     |
-| `MONGODB_DATABASE_PASSWORD` | example                 | yes                   |                                                                                                                                     |
-| `RM_EXPOSE_PORT`            | 8012                    | no                    | Optional, defaults to 80. This is the port this microservice is exposing. The local setup exposes a non-default port!               |
-| `RM_COLLECTION_PREFIX`      | localSetup-             | no                    | Optional. A (unique) prefix that is prepended to every database collection of this service.                                         |
-| `RM_CAR_SERVER`             | `http://localhost:8001` | no                    | The URL of the Car server of the domain layer.                                                                                      |
-| `RM_REQUEST_TIMEOUT`        | 5s                      | no                    | Optional. The timeout for requests to the Car server ([number with suffix](https://pkg.go.dev/time#ParseDuration)). Defaults to 5s. |
-| `RM_ALLOW_ORIGINS`          | *                       | no                    | Optional. A comma-separated list of allowed origins for CORS requests. By default, no additional origins are allowed.               |
+| Environment Variable        | Local Setup Value                                       | Required for Testing? | Comment                                                                                                                             |
+|-----------------------------|---------------------------------------------------------|-----------------------|-------------------------------------------------------------------------------------------------------------------------------------|
+| `MONGODB_CONNECTION_STRING` | mongodb://root:example@localhost:27032/ccsappvp2rentals | yes                   | Local setup uses a non-default port!                                                                                                |
+| `MONGODB_DATABASE_NAME`     | ccsappvp2rentals                                        | yes                   |                                                                                                                                     |
+| `RM_EXPOSE_PORT`            | 8012                                                    | no                    | Optional, defaults to 80. This is the port this microservice is exposing. The local setup exposes a non-default port!               |
+| `RM_COLLECTION_PREFIX`      | localSetup-                                             | no                    | Optional. A (unique) prefix that is prepended to every database collection of this service.                                         |
+| `RM_CAR_SERVER`             | `http://localhost:8001`                                 | no                    | The URL of the Car server of the domain layer.                                                                                      |
+| `RM_REQUEST_TIMEOUT`        | 5s                                                      | no                    | Optional. The timeout for requests to the Car server ([number with suffix](https://pkg.go.dev/time#ParseDuration)). Defaults to 5s. |
+| `RM_ALLOW_ORIGINS`          | *                                                       | no                    | Optional. A comma-separated list of allowed origins for CORS requests. By default, no additional origins are allowed.               |
 
 ## Testing
 ### Test Setup
